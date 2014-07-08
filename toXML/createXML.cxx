@@ -26,15 +26,54 @@ using boost::property_tree::write_xml;
 using boost::property_tree::xml_writer_settings;
 
 unsigned uid = 0;
+unsigned id_count = 1;
 
-void addAssembly(ptree*	dataCon, ListOfRoseObject* aimObjs){
-	for (unsigned i = 0, sz = aimObjs->size(); i < sz; i++){
-		RoseObject* obj = aimObjs->get(i);
-		std::cout << "\t" << obj->domain()->name() << "\n";
-		ptree& xmlObj = dataCon->add(obj->domain()->name(), "");
-		xmlObj.add("<xmlattr>.uid", uid);
-		uid++;
+void makePart(ARMObject* a_obj, ptree* tree){
+	uid++;
+	ListOfRoseObject aimObjs;
+	a_obj->getAIMObjects(&aimObjs);
+	std::cout << a_obj->getRootObject()->domain()->name() << " is root \n";
+	RoseObject* obj = a_obj->getRootObject();
+	if (obj->domain() != ROSE_DOMAIN(stp_product_definition)){
+		return;
 	}
+	stp_product_definition* pd = ROSE_CAST(stp_product_definition, obj);
+	stp_product_definition_formation * pdf = pd->formation();
+	stp_product * p = pdf ? pdf->of_product() : 0;
+	if (!p)return;
+	std::cout << p->name() << "\n";
+	ptree& part = tree->add(std::string("n0:Uos.DataContainer.Part") , "");
+	part.add("<xmlattr>.Uid", "p--" + std::to_string(uid));
+	ptree& xmlObj = part.add("Id", "");
+	xmlObj.add("<xmlattr>.id", p->name());
+	
+	xmlObj.add("Identifier", "");
+	xmlObj.add("Identifier.<xmlattr>.uid", "pid--" + std::to_string(uid) + "--id" + std::to_string(id_count));
+
+	xmlObj.add("Identifier.<xmlattr>.id", p->name());
+	xmlObj.add("Identifier.<xmlattr>.idContextRef", "create references");
+
+	part.add("Name.CharacterString", p->name());
+
+	RoseCursor curse;
+	curse.domain(ROSE_DOMAIN(stp_product_related_product_category));
+	curse.traverse(obj->design());
+	//RoseObject* obj;
+	while (obj = curse.next()){
+		stp_product_related_product_category* tmp = ROSE_CAST(stp_product_related_product_category, obj);
+		if (tmp){
+			part.add("PartTypes.Class.<xmlattr>.uidRef", "pca--" + std::string(tmp->name()) );
+		}
+	}
+	
+	part.add("Versions.PartVersion.<xmlattr>.uid", "pv--" + std::to_string(uid) + "--id" + std::to_string(id_count));
+
+	ptree& pv = part.add("Versions.PartVersion.Views.PartView", "");
+	pv.add("<xmlattr>.xsi:type", "n0:AssemblyDefinition");
+	pv.add("<xmlattr>.uid", "pvv--" + std::to_string(uid) + "--id" + std::to_string(id_count));
+	id_count++;
+
+
 	return;
 }
 
@@ -91,6 +130,7 @@ int main(int argc, char* argv[]){
 	dat.add("<xmlattr>.xsi:type", "n0:AP242DataContainer");
 	ARMCursor cur; //arm cursor
 	ARMObject *a_obj;
+	cur.domain(Workpiece::type());
 	cur.traverse(master);
 	ListOfRoseObject aimObjs;
 	unsigned i, sz;
@@ -98,20 +138,12 @@ int main(int argc, char* argv[]){
 	
 		aimObjs.emptyYourself();	
 		std::cout << a_obj->getModuleName() << std::endl;
-		a_obj->getAIMObjects(&aimObjs);
-		ptree& assembly = tree.add(std::string("n0:Uos.DataContainer.") + a_obj->getModuleName(), "");
-		assembly.add("<xmlattr>.Uid", uid);
-		uid++;
-		//addAssembly( &assembly, &aimObjs);
-		for (unsigned i = 0, sz = aimObjs.size(); i < sz; i++){
-			RoseObject* obj = aimObjs.get(i);
-			std::cout << "\t" << obj->domain()->name() << "\n";
-			ptree& xmlObj = assembly.add(obj->domain()->name(), "");
-			xmlObj.add("<xmlattr>.Uid", uid);
-			//for attributes{ add name}
-			//xmlObj.add("", obj->attributes())
-			uid++;
-		}
+		//a_obj->getAIMObjects(&aimObjs);
+
+		makePart(a_obj, &tree);
+
+
+		
 		
 	}
 	write_xml(std::string(master->fileDirectory() + name), tree, std::locale(), xml_writer_settings<char>(' ', 4));
