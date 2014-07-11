@@ -36,6 +36,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="createXML.cxx" />
+    <ClCompile Include="track.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ROSERange.h" />
+    <ClInclude Include="track.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <Keyword>Win32Proj</Keyword>
