@@ -16,6 +16,7 @@
 #include <stix_property.h>
 #include <stix_split.h>
 
+#include "track.h"
 #include "ROSERange.h"
 #pragma comment(lib,"stpcad_stix.lib")
 
@@ -28,6 +29,9 @@ using boost::property_tree::xml_writer_settings;
 
 unsigned uid = 0;
 unsigned id_count = 1;
+
+const std::string prefixes[] = { "exa", "peta", "tera", "giga", "mega", "kilo", "hecto", "deca", "deci", "centi", "milli", "micro", "nano", "pico", "femto", "atto" };
+const std::string unit_names[] = { "metre",	"gram",	"second",	"ampere",	"kelvin",	"mole",	"candela",	"radian",	"steradian",	"hertz",	"newton",	"pascal",	"joule",	"watt",	"coulomb",	"volt",	"farad",	"ohm",	"siemens",	"weber",	"tesla",	"henry",	"degree_celsius",	"lumen",	"lux",	"becquerel",	"gray",	"sievert" };
 
 void convertEntity(ptree* scope, RoseObject* ent, int currentUid){ //make it dumb so that it can be used on geomertry objects as well
 	RoseObject* obj;
@@ -43,42 +47,11 @@ void convertEntity(ptree* scope, RoseObject* ent, int currentUid){ //make it dum
 
 		if (att->isAggregate()){//recurse!
 			obj = ent->getObject(att);
-			//std::cout << "obj size " << obj->size() << obj->domain()->name() << "\n";
 			std::string derp;
-			//ptree& miniScope = scope->add(att->name(),"");
 			for (unsigned j = 0, sz = obj->size(); j < sz; j++){
-				//std::cout << obj->getDouble(j) << "\n";
-				derp += std::to_string(obj->getDouble(j)); 
+				derp += std::to_string(obj->getDouble(j) ); 
+				//std::cout << obj << "\n";
 				derp += " ";
-				//convertEntity(&miniScope, obj, uid);
-				/*for (auto k = 0u; k < atts->size(); k++){
-					//if (!atts->get(k)->isSimple()){
-
-						
-						
-					//}
-					/*else{
-						std::cout << atts->get(k)->className() << "\n";
-						if (atts->get(k)->isString()){
-							if (strcmp("NONE", ent->getString(atts->get(k)))){
-								derp += ent->getString(atts->get(k));
-								derp += " ";
-							} 
-						}
-						else if (atts->get(k)->isInteger()){
-							std::cout << ent->getInteger(atts->get(k)) << ", " << atts->get(k)->name() << "\n";
-							derp += std::to_string(ent->getInteger(atts->get(k))) + " ";
-						}
-						else if (atts->get(k)->isDouble()){
-							std::cout << ent->getDouble(atts->get(k)) << ", " << atts->get(k)->name() << "\n";
-							derp += std::to_string(ent->getDouble(atts->get(k))) + " ";
-						}
-						else if (atts->get(k)->isFloat()){
-							std::cout << ent->getFloat(atts->get(k)) << ", " << atts->get(k)->name() << "\n";
-							derp += std::to_string(ent->getFloat(atts->get(k))) + " ";
-						}
-					}
-				}*/
 			}
 			scope->add(att->name(), derp);
 		}
@@ -93,24 +66,17 @@ void convertEntity(ptree* scope, RoseObject* ent, int currentUid){ //make it dum
 				}
 			}
 			else if(att->isInteger()){
-				//std::cout << ent->getString(att) << ", " << att->name() << "\n";
 				scope->add(att->name(), ent->getInteger(att) );
 			}
 			else if (att->isDouble()){
-				//std::cout << ent->getString(att) << ", " << att->name() << "\n";
 				scope->add(att->name(), ent->getDouble(att));
 			}
 			else if (att->isFloat()){
-				//std::cout << ent->getString(att) << ", " << att->name() << "\n";
 				scope->add(att->name(), ent->getFloat(att));
 			}
 
 		}
-		//else { std::cout << att->slotDomain()->name() << "\n"; }
 	}
-
-	//obj = rose_get_nested_object(ROSE_CAST(RoseUnion, ent));
-
 }
 
 void exchangeContext(ptree* scope, RoseDesign* des){
@@ -138,7 +104,94 @@ void exchangeContext(ptree* scope, RoseDesign* des){
 	}
 }
 
+void doUnits(Workpiece * wkpc, ptree* tree){
+	auto gc = Geometric_context::find(wkpc->get_its_geometry()->context_of_items());
+	auto l_u = gc->get_length_unit();
+	if (l_u){
+		//to get info out of units cast to type I want and just take it
+		uidTracker* mgr = uidTracker::find(gc->get_length_unit());
+		if (!mgr){
+			mgr = uidTracker::make(gc->get_length_unit());
+			uid++;
+			std::string tmpUid = std::string("u--") + std::to_string(uid); 
+			ptree& unit = tree->add("Unit", "");
+			unit.add("<xmlattr>.uid", tmpUid);
+			mgr->setUid(tmpUid);
+			auto SI = ROSE_CAST(stp_si_unit, l_u);
+			if (SI){
+				unit.add("Kind.ClassString", "SI system");
+				if (SI->name() >= 0){ unit.add("Name.ClassString", unit_names[SI->name()]); }
+				if (SI->prefix() >= 0){ unit.add("Prefix.ClassString", prefixes[SI->prefix()]);	}
+			}
+		}
+	}
+	std::cout << gc->get_plane_angle_unit()->domain()->name() << "\n";
+	auto pa_u = gc->get_plane_angle_unit();
+	if (pa_u){
+		uidTracker* mgr = uidTracker::find(gc->get_plane_angle_unit());
+		if (!mgr){
+			mgr = uidTracker::make(gc->get_plane_angle_unit());
+			uid++;
+			std::string tmpUid = std::string("u--") + std::to_string(uid);
+			ptree& unit = tree->add("Unit", "");
+			unit.add("<xmlattr>.uid", tmpUid);
+			mgr->setUid(tmpUid);
+			auto SI = ROSE_CAST(stp_si_unit, pa_u);
+			auto conversion_unit = ROSE_CAST(stp_conversion_based_unit, pa_u);
+			if (SI){
+				unit.add("Kind.ClassString", "SI system");
+				if (SI->name() >= 0){ unit.add("Name.ClassString", unit_names[SI->name()]); }
+				if (SI->prefix() >= 0){ unit.add("Prefix.ClassString", prefixes[SI->prefix()]); }
+			}
+			else if (conversion_unit){
+				unit.add("Kind.ClassString", "Conversion Based system");
+				std::cout << conversion_unit->name() << "\n";
+				unit.add("Name.ClassString", conversion_unit->name());
 
+			}
+		}
+	}
+	std::cout << gc->get_solid_angle_unit()->domain()->name() << "\n";
+	auto sa_u = gc->get_solid_angle_unit();
+	if (sa_u){
+		uidTracker* mgr = uidTracker::find(gc->get_solid_angle_unit());
+		if (!mgr){
+			mgr = uidTracker::make(gc->get_solid_angle_unit());
+			uid++;
+			std::string tmpUid = std::string("u--") + std::to_string(uid);
+			ptree& unit = tree->add("Unit", "");
+			unit.add("<xmlattr>.uid", tmpUid);
+			auto SI = ROSE_CAST(stp_si_unit, sa_u);
+
+			if (SI){
+				unit.add("Kind.ClassString", "SI system");
+				if (SI->name() >= 0){ unit.add("Name.ClassString", unit_names[SI->name()]); }
+				if (SI->prefix() >= 0){
+					std::cout << SI->prefix() << "\n";
+					unit.add("Prefix.ClassString", prefixes[SI->prefix()]);
+				}
+			}
+		}
+	}
+}
+
+void doShapeDependentProperty(Workpiece * wkpc, ptree* tree){ //waiting for joe to implement metafunctions for vole, surface area, centroid, etc..
+	uid++;
+	ptree& sdp = tree->add("ShapeDependentProperty", "");
+	sdp.add("<xlmattr>.uid", "sdp--" + std::to_string(uid));
+	sdp.add("<xlmattr>.xsi:type", "n1:GeneralShapeDependentProperty");
+}
+
+void doPartProperty(ptree* tree, RoseObject* ent){//filler code for demo
+	uid++;
+	stp_product_definition * pd = ROSE_CAST(stp_product_definition, ent);
+	ptree& pv = tree->add("AssignedPropertyValue.PropertyValue", "");
+	pv.add("<xmlattr>.uid", "pv--" + std::to_string(uid));
+	pv.add("<xmlattr>.xsi:type", "n1:StringValue");
+	pv.add("Definition.PropertyDefinitionString", "Part Origin"); // place of origin. is this for the design or manufacture of the part?
+	pv.add("Name.CharacterString", pd->formation()->of_product()->name());
+	pv.add("ValueComponent.CharacterString", "Step Tools Inc");
+}
 
 std::string handleGeometry(Workpiece * wkpc, ptree* tree){
 	//returns the uid for the created geometricrepresentation  for use in PartView and storing geometry
@@ -177,6 +230,7 @@ void makePart(Workpiece * wkpc, ptree* tree){
 	// void makePart(stp_shape_definition_representation * sdr, ptree* tree){
 	uid++;
 	int currentUid = uid;
+	int current_id = id_count;
 	RoseObject* obj;
 	ListOfRoseObject children;
 	stp_product_definition* pd;
@@ -224,8 +278,14 @@ void makePart(Workpiece * wkpc, ptree* tree){
 
 	std::string geoRef = handleGeometry(wkpc, tree);	//ptree& geoRep = tree->add("n0:Uos.DataContainer.GeometricRepresentation", "");
 	pv.put("DefiningGeometry.<xmlattr>.uidRef", geoRef);
-	pv.add("PropertyValueAssignment.<xmlattr>.uid", "pva--" + std::to_string(currentUid));
-
+	//do nauo
+	/*ptree& pvvid = pv.add("ViewOccurrenceRelationship", "");
+	uid++;	id_count++;
+	pvvid.add("<xmlattr>.uid", "pvvid--" + std::to_string(uid) + "--" + std::to_string(id_count) );*/
+	ptree& pva = pv.add("PropertyValueAssignment", "");
+	pva.add("<xmlattr>.uid", "pva--" + std::to_string(currentUid));
+	doPartProperty(&pva, pd);
+	//stp_mass_measure_with_unit
 	id_count++;
 	return;
 }
@@ -306,6 +366,7 @@ int main(int argc, char* argv[]){
 	//unsigned i, sz;
 	while (a_obj = cur.next()){
 		std::cout << a_obj->getModuleName() << std::endl;
+		doUnits(a_obj->castToWorkpiece(), &tree);
 		makePart(a_obj->castToWorkpiece(), &tree);
 	}
 
