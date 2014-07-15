@@ -230,7 +230,6 @@ void makePart(Workpiece * wkpc, ptree* tree){
 	// void makePart(stp_shape_definition_representation * sdr, ptree* tree){
 	uid++;
 	int currentUid = uid;
-	int current_id = id_count;
 	RoseObject* obj;
 	ListOfRoseObject children;
 	stp_product_definition* pd;
@@ -278,16 +277,33 @@ void makePart(Workpiece * wkpc, ptree* tree){
 
 	std::string geoRef = handleGeometry(wkpc, tree);	//ptree& geoRep = tree->add("n0:Uos.DataContainer.GeometricRepresentation", "");
 	pv.put("DefiningGeometry.<xmlattr>.uidRef", geoRef);
-	//do nauo
-	/*ptree& pvvid = pv.add("ViewOccurrenceRelationship", "");
-	uid++;	id_count++;
-	pvvid.add("<xmlattr>.uid", "pvvid--" + std::to_string(uid) + "--" + std::to_string(id_count) );*/
+	//do single occurence, 
+	ptree& pi = pv.add("Occurrence", "");
+	pi.add("<xmlattr>.uid", "pi--" + std::to_string(uid) + "--id" + std::to_string(id_count));
+	uid++;
+	StixMgrAsmProduct * pm = StixMgrAsmProduct::find(pd);
+	for (unsigned i = 0; i < pm->child_nauos.size();i++){
+		ptree& pi = pv.add("Occurrence", "");
+		pi.add("<xmlattr>.xsi:type", "n0:SingleOccurrence");
+		uidTracker* mgr = uidTracker::make(pm->child_nauos[i]);
+		mgr->occurence++;
+		std::cout << mgr->occurence << "\n";
+		mgr->setUid("pi--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence));
+		pi.add("<xmlattr>.uid", mgr->getUid());
+		pi.add("Id.<xmlattr>.id", pd->formation()->of_product()->name() + std::string(" ") + std::to_string(mgr->getOccurence() ) );
+		pi.add("Description", pm->child_nauos[i]->description());
+		pi.add("PropertyValueAssignment.<xmlattr>.uidRef", "pva--" + std::to_string(currentUid));
+	}
 	ptree& pva = pv.add("PropertyValueAssignment", "");
 	pva.add("<xmlattr>.uid", "pva--" + std::to_string(currentUid));
 	doPartProperty(&pva, pd);
 	//stp_mass_measure_with_unit
 	id_count++;
 	return;
+}
+
+void do_nauo(Workpiece* wkpc, ptree* tree){
+	ptree& pvvid = tree->add()
 }
 
 void copyHeader(ptree* tree, RoseDesign* master){
@@ -358,6 +374,7 @@ int main(int argc, char* argv[]){
 	dat.put("<xmlattr>.xmlns", "");
 	dat.add("<xmlattr>.xsi:type", "n0:AP242DataContainer");
 
+	stix_tag_asms(master);
 	ARMCursor cur; //arm cursor
 	ARMObject *a_obj;
 	cur.domain(Workpiece::type());
@@ -369,11 +386,14 @@ int main(int argc, char* argv[]){
 		doUnits(a_obj->castToWorkpiece(), &tree);
 		makePart(a_obj->castToWorkpiece(), &tree);
 	}
-
-
-	for (auto &i : ROSE_RANGE(stp_shape_definition_representation, master)){
-		//makePart(&i, &tree);
+	cur.traverse(master);
+	while (a_obj = cur.next()){
+		do_nauo(a_obj->castToWorkpiece(), &tree);
 	}
+
+	//for (auto &i : ROSE_RANGE(stp_shape_definition_representation, master)){
+		//makePart(&i, &tree);
+	//}
 
 	write_xml(std::string(master->fileDirectory() + name), tree, std::locale(), xml_writer_settings<char>(' ', 4));
 
