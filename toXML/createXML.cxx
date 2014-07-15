@@ -16,12 +16,12 @@
 #include <stix_property.h>
 #include <stix_split.h>
 
+//#include <boost/property_tree/ptree.hpp>
+//#include <boost/property_tree/xml_parser.hpp>
+
 #include "track.h"
 #include "ROSERange.h"
 #pragma comment(lib,"stpcad_stix.lib")
-
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
 
 using boost::property_tree::ptree;
 using boost::property_tree::write_xml;
@@ -272,6 +272,7 @@ void makePart(Workpiece * wkpc, ptree* tree){
 	else { part.add("Versions.Id.<xmlattr>.id", "/NULL"); } //replace null with a check for versioning that returns a string 
 
 	ptree& pv = part.add("Versions.PartVersion.Views.PartView", "");
+
 	pv.add("<xmlattr>.xsi:type", "n0:AssemblyDefinition");
 	pv.add("<xmlattr>.uid", "pvv--" + std::to_string(currentUid) + "--id" + std::to_string(id_count));
 
@@ -283,14 +284,15 @@ void makePart(Workpiece * wkpc, ptree* tree){
 	uid++;
 	StixMgrAsmProduct * pm = StixMgrAsmProduct::find(pd);
 	for (unsigned i = 0; i < pm->child_nauos.size();i++){
-		ptree& pi = pv.add("Occurrence", "");
-		pi.add("<xmlattr>.xsi:type", "n0:SingleOccurrence");
-		uidTracker* mgr = uidTracker::make(pm->child_nauos[i]);
+		ptree& pi = pv.add("ViewOccurrenceRelationship", "");
+		pi.add("<xmlattr>.xsi:type", std::string("n0:") + pm->child_nauos[i]->domain()->name());
+		uidTracker* mgr = uidTracker::make(pm->child_nauos[i]); //may need to label something different
+		mgr->setPV(&pv);
 		mgr->occurence++;
 		std::cout << mgr->occurence << "\n";
 		mgr->setUid("pi--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence));
 		pi.add("<xmlattr>.uid", mgr->getUid());
-		pi.add("Id.<xmlattr>.id", pd->formation()->of_product()->name() + std::string(" ") + std::to_string(mgr->getOccurence() ) );
+		pi.add("Id.<xmlattr>.id", pm->child_nauos[i]->id() + std::string(".") + std::to_string(mgr->getOccurence()));
 		pi.add("Description", pm->child_nauos[i]->description());
 		pi.add("PropertyValueAssignment.<xmlattr>.uidRef", "pva--" + std::to_string(currentUid));
 	}
@@ -303,7 +305,16 @@ void makePart(Workpiece * wkpc, ptree* tree){
 }
 
 void do_nauo(Workpiece* wkpc, ptree* tree){
-	ptree& pvvid = tree->add()
+	stp_product_definition* pd = wkpc->getRoot();
+	StixMgrAsmProduct * pm = StixMgrAsmProduct::find(pd);
+	for (unsigned i = 0; i < pm->child_nauos.size(); i++){
+		uidTracker* mgr = uidTracker::find(pd);
+		if (mgr){
+			ptree* pv = mgr->getPV();
+			ptree& viewOcc = pv->add("ViewOccurrenceRelationship", "");
+			viewOcc.add("<xmlattr>.uid", "");
+		}
+	}
 }
 
 void copyHeader(ptree* tree, RoseDesign* master){
