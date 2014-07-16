@@ -279,23 +279,34 @@ void makePart(Workpiece * wkpc, ptree* tree){
 	std::string geoRef = handleGeometry(wkpc, tree);	//ptree& geoRep = tree->add("n0:Uos.DataContainer.GeometricRepresentation", "");
 	pv.put("DefiningGeometry.<xmlattr>.uidRef", geoRef);
 	//do single occurence, 
-	ptree& pi = pv.add("Occurrence", "");
-	pi.add("<xmlattr>.uid", "pi--" + std::to_string(uid) + "--id" + std::to_string(id_count));
-	uid++;
+	uidTracker* mgr = uidTracker::find(pd);
+	if (mgr){
+		if (mgr->getPV()){
+			ptree& pi = pv.add("Occurrence", "");
+			pi.add("<xmlattr>.xsi:type", "n0:SingleOccurrence");
+			pi.add("<xmlattr>.uid", "pi--" + std::to_string(uid) + "--id" + std::to_string(id_count));
+			pi.add("Id.<xmlattr>. id", pd->formation()->of_product()->name() + std::string(".") + std::to_string(mgr->getOccurence()));
+			std::cout << "Occurrence: " << pd->formation()->of_product()->name() << "\n";
+			pi.add("PropertyValueAssignment.<xmlattr>.uid", "pva--" + std::to_string(currentUid));
+		}
+	}
+
 	StixMgrAsmProduct * pm = StixMgrAsmProduct::find(pd);
 	for (unsigned i = 0; i < pm->child_nauos.size();i++){
 		ptree& pi = pv.add("ViewOccurrenceRelationship", "");
-		pi.add("<xmlattr>.xsi:type", std::string("n0:") + pm->child_nauos[i]->domain()->name());
-		uidTracker* mgr = uidTracker::make(pm->child_nauos[i]); //may need to label something different
+		std::cout << stix_get_related_pdef(pm->child_nauos[i])->formation()->of_product()->name() << "\n";
+		uidTracker* mgr = uidTracker::make(stix_get_related_pdef(pm->child_nauos[i])); //may need to label something different
 		mgr->setPV(&pv);
 		mgr->occurence++;
 		std::cout << mgr->occurence << "\n";
 		mgr->setUid("pi--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence));
 		pi.add("<xmlattr>.uid", mgr->getUid());
+		pi.add("<xmlattr>.xsi:type", std::string("n0:") + pm->child_nauos[i]->domain()->name());
 		pi.add("Id.<xmlattr>.id", pm->child_nauos[i]->id() + std::string(".") + std::to_string(mgr->getOccurence()));
 		pi.add("Description", pm->child_nauos[i]->description());
 		pi.add("PropertyValueAssignment.<xmlattr>.uidRef", "pva--" + std::to_string(currentUid));
 	}
+
 	ptree& pva = pv.add("PropertyValueAssignment", "");
 	pva.add("<xmlattr>.uid", "pva--" + std::to_string(currentUid));
 	doPartProperty(&pva, pd);
@@ -304,7 +315,7 @@ void makePart(Workpiece * wkpc, ptree* tree){
 	return;
 }
 
-void do_nauo(Workpiece* wkpc, ptree* tree){
+/*void do_nauo(Workpiece* wkpc, ptree* tree){
 	stp_product_definition* pd = wkpc->getRoot();
 	StixMgrAsmProduct * pm = StixMgrAsmProduct::find(pd);
 	for (unsigned i = 0; i < pm->child_nauos.size(); i++){
@@ -315,7 +326,7 @@ void do_nauo(Workpiece* wkpc, ptree* tree){
 			viewOcc.add("<xmlattr>.uid", "");
 		}
 	}
-}
+}*/
 
 void copyHeader(ptree* tree, RoseDesign* master){
 	unsigned i, sz;
@@ -399,7 +410,7 @@ int main(int argc, char* argv[]){
 	}
 	cur.traverse(master);
 	while (a_obj = cur.next()){
-		do_nauo(a_obj->castToWorkpiece(), &tree);
+		//
 	}
 
 	//for (auto &i : ROSE_RANGE(stp_shape_definition_representation, master)){
