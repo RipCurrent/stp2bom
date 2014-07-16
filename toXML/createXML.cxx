@@ -61,7 +61,7 @@ void convertEntity(ptree* scope, RoseObject* ent, int currentUid){ //make it dum
 		}
 		else if (att->isSimple()){//store this!
 			if (att->isString()){
-				if (strcmp("NONE", ent->getString(att))){
+				if (strcmp("NONE", ent->getString(att)) && strcmp("", ent->getString(att))){
 					scope->add(att->name(), ent->getString(att));
 				}
 			}
@@ -233,6 +233,7 @@ std::string handleGeometry(Workpiece * wkpc, ptree* tree){
 void makePart(Workpiece * wkpc, ptree* tree){
 	// void makePart(stp_shape_definition_representation * sdr, ptree* tree){
 	uid++;
+	unsigned i;
 	int currentUid = uid;
 	RoseObject* obj;
 	ListOfRoseObject children;
@@ -292,31 +293,31 @@ void makePart(Workpiece * wkpc, ptree* tree){
 	//do single occurence, 
 	if (mgr){
 		if (mgr->getPV()){
-			ptree& pi = pv.add("Occurrence", "");
-			pi.add("<xmlattr>.xsi:type", "n0:SingleOccurrence");
-			pi.add("<xmlattr>.uid", "pi--" + std::to_string(mgr->getUid()) + "--id" + std::to_string(mgr->getOccurence()));
-			pi.add("Id.<xmlattr>. id", pd->formation()->of_product()->name() + std::string(".") + std::to_string(mgr->getOccurence()));
-			std::cout << "Occurrence: " << pd->formation()->of_product()->name() << "\n";
-			pi.add("PropertyValueAssignment.<xmlattr>.uid", "pva--" + std::to_string(currentUid));
-			mgr->occurence++;
+			for (i = 0; i < mgr->getOccurence(); i++){
+				ptree& pi = pv.add("Occurrence", "");
+				pi.add("<xmlattr>.xsi:type", "n0:SingleOccurrence");
+				pi.add("<xmlattr>.uid", "pi--" + std::to_string(mgr->getUid()) + "--id" + std::to_string(mgr->getOccurence() - (i+1)) );
+				pi.add("Id.<xmlattr>. id", pd->formation()->of_product()->name() + std::string(".") + std::to_string(mgr->getOccurence() - (i + 1)) );
+				std::cout << "Occurrence: " << pd->formation()->of_product()->name() << "\n";
+				pi.add("PropertyValueAssignment.<xmlattr>.uid", "pva--" + std::to_string(currentUid));
+			}
 		}
 	}
 	//do NAUOs
 	StixMgrAsmProduct * pm = StixMgrAsmProduct::find(pd);
-	for (unsigned i = 0; i < pm->child_nauos.size();i++){
+	for (i = 0; i < pm->child_nauos.size();i++){
 		ptree& pi = pv.add("ViewOccurrenceRelationship", "");
-		std::cout << stix_get_related_pdef(pm->child_nauos[i])->formation()->of_product()->name() << "\n";
 		uidTracker* mgr = uidTracker::make(stix_get_related_pdef(pm->child_nauos[i])); //may need to label something different
-		uid++;
-		mgr->setUid(uid);
+		std::cout << stix_get_related_pdef(pm->child_nauos[i])->formation()->of_product()->name() << "\n" << mgr->getOccurence() << "\n";
+		if (!mgr->getUid()){ uid++; mgr->setUid(uid); }
 		mgr->setPV(&pv);
-		std::cout << mgr->occurence << "\n";
 		pi.add("<xmlattr>.uid", "pi--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence));
 		pi.add("<xmlattr>.xsi:type", std::string("n0:") + pm->child_nauos[i]->domain()->name());
 		pi.add("Related.<xmlattr>.uidRef", "pi--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence));
 		pi.add("Id.<xmlattr>.id", pm->child_nauos[i]->id() + std::string(".") + std::to_string(mgr->getOccurence()));
 		pi.add("Description", pm->child_nauos[i]->description());
 		pi.add("PropertyValueAssignment.<xmlattr>.uidRef", "pva--" + std::to_string(currentUid));
+		mgr->occurence++;
 	}
 
 	ptree& pva = pv.add("PropertyValueAssignment", "");
@@ -416,18 +417,14 @@ int main(int argc, char* argv[]){
 	ListOfRoseObject aimObjs;
 	//unsigned i, sz;
 	while (a_obj = cur.next()){
-		std::cout << a_obj->getModuleName() << std::endl;
 		doUnits(a_obj->castToWorkpiece(), &tree);
 		makePart(a_obj->castToWorkpiece(), &tree);
 	}
 	cur.traverse(master);
+	cur.domain(NULL);
 	while (a_obj = cur.next()){
-		//
+		std::cout << a_obj->getModuleName() << std::endl;
 	}
-
-	//for (auto &i : ROSE_RANGE(stp_shape_definition_representation, master)){
-		//makePart(&i, &tree);
-	//}
 
 	write_xml(std::string(master->fileDirectory() + name), tree, std::locale(), xml_writer_settings<char>(' ', 4));
 
