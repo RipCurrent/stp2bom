@@ -106,69 +106,71 @@ void exchangeContext(ptree* scope, RoseDesign* des){
 
 void doUnits(Workpiece * wkpc, ptree* tree){
 	auto gc = Geometric_context::find(wkpc->get_its_geometry()->context_of_items());
-	auto l_u = gc->get_length_unit();
-	if (l_u){
-		//to get info out of units cast to type I want and just take it
-		uidTracker* mgr = uidTracker::find(gc->get_length_unit());
-		if (!mgr){
-			mgr = uidTracker::make(gc->get_length_unit());
-			uid++;
-			std::string tmpUid = std::string("u--") + std::to_string(uid); 
-			ptree& unit = tree->add("Unit", "");
-			unit.add("<xmlattr>.uid", tmpUid);
-			mgr->setUid(tmpUid);
-			auto SI = ROSE_CAST(stp_si_unit, l_u);
-			if (SI){
-				unit.add("Kind.ClassString", "SI system");
-				if (SI->name() >= 0){ unit.add("Name.ClassString", unit_names[SI->name()]); }
-				if (SI->prefix() >= 0){ unit.add("Prefix.ClassString", prefixes[SI->prefix()]);	}
+	if (gc){
+		auto l_u = gc->get_length_unit();
+		if (l_u){
+			//to get info out of units cast to type I want and just take it
+			uidTracker* mgr = uidTracker::find(gc->get_length_unit());
+			if (!mgr){
+				mgr = uidTracker::make(gc->get_length_unit());
+				uid++;
+				std::string tmpUid = std::string("u--") + std::to_string(uid);
+				ptree& unit = tree->add("Unit", "");
+				unit.add("<xmlattr>.uid", tmpUid);
+				mgr->setUid(tmpUid);
+				auto SI = ROSE_CAST(stp_si_unit, l_u);
+				if (SI){
+					unit.add("Kind.ClassString", "SI system");
+					if (SI->name() >= 0){ unit.add("Name.ClassString", unit_names[SI->name()]); }
+					if (SI->prefix() >= 0){ unit.add("Prefix.ClassString", prefixes[SI->prefix()]); }
+				}
 			}
 		}
-	}
-	std::cout << gc->get_plane_angle_unit()->domain()->name() << "\n";
-	auto pa_u = gc->get_plane_angle_unit();
-	if (pa_u){
-		uidTracker* mgr = uidTracker::find(gc->get_plane_angle_unit());
-		if (!mgr){
-			mgr = uidTracker::make(gc->get_plane_angle_unit());
-			uid++;
-			std::string tmpUid = std::string("u--") + std::to_string(uid);
-			ptree& unit = tree->add("Unit", "");
-			unit.add("<xmlattr>.uid", tmpUid);
-			mgr->setUid(tmpUid);
-			auto SI = ROSE_CAST(stp_si_unit, pa_u);
-			auto conversion_unit = ROSE_CAST(stp_conversion_based_unit, pa_u);
-			if (SI){
-				unit.add("Kind.ClassString", "SI system");
-				if (SI->name() >= 0){ unit.add("Name.ClassString", unit_names[SI->name()]); }
-				if (SI->prefix() >= 0){ unit.add("Prefix.ClassString", prefixes[SI->prefix()]); }
-			}
-			else if (conversion_unit){
-				unit.add("Kind.ClassString", "Conversion Based system");
-				std::cout << conversion_unit->name() << "\n";
-				unit.add("Name.ClassString", conversion_unit->name());
+		std::cout << gc->get_plane_angle_unit()->domain()->name() << "\n";
+		auto pa_u = gc->get_plane_angle_unit();
+		if (pa_u){
+			uidTracker* mgr = uidTracker::find(gc->get_plane_angle_unit());
+			if (!mgr){
+				mgr = uidTracker::make(gc->get_plane_angle_unit());
+				uid++;
+				std::string tmpUid = std::string("u--") + std::to_string(uid);
+				ptree& unit = tree->add("Unit", "");
+				unit.add("<xmlattr>.uid", tmpUid);
+				mgr->setUid(tmpUid);
+				auto SI = ROSE_CAST(stp_si_unit, pa_u);
+				auto conversion_unit = ROSE_CAST(stp_conversion_based_unit, pa_u);
+				if (SI){
+					unit.add("Kind.ClassString", "SI system");
+					if (SI->name() >= 0){ unit.add("Name.ClassString", unit_names[SI->name()]); }
+					if (SI->prefix() >= 0){ unit.add("Prefix.ClassString", prefixes[SI->prefix()]); }
+				}
+				else if (conversion_unit){
+					unit.add("Kind.ClassString", "Conversion Based system");
+					std::cout << conversion_unit->name() << "\n";
+					unit.add("Name.ClassString", conversion_unit->name());
 
+				}
 			}
 		}
-	}
-	std::cout << gc->get_solid_angle_unit()->domain()->name() << "\n";
-	auto sa_u = gc->get_solid_angle_unit();
-	if (sa_u){
-		uidTracker* mgr = uidTracker::find(gc->get_solid_angle_unit());
-		if (!mgr){
-			mgr = uidTracker::make(gc->get_solid_angle_unit());
-			uid++;
-			std::string tmpUid = std::string("u--") + std::to_string(uid);
-			ptree& unit = tree->add("Unit", "");
-			unit.add("<xmlattr>.uid", tmpUid);
-			auto SI = ROSE_CAST(stp_si_unit, sa_u);
+		std::cout << gc->get_solid_angle_unit()->domain()->name() << "\n";
+		auto sa_u = gc->get_solid_angle_unit();
+		if (sa_u){
+			uidTracker* mgr = uidTracker::find(gc->get_solid_angle_unit());
+			if (!mgr){
+				mgr = uidTracker::make(gc->get_solid_angle_unit());
+				uid++;
+				std::string tmpUid = std::string("u--") + std::to_string(uid);
+				ptree& unit = tree->add("Unit", "");
+				unit.add("<xmlattr>.uid", tmpUid);
+				auto SI = ROSE_CAST(stp_si_unit, sa_u);
 
-			if (SI){
-				unit.add("Kind.ClassString", "SI system");
-				if (SI->name() >= 0){ unit.add("Name.ClassString", unit_names[SI->name()]); }
-				if (SI->prefix() >= 0){
-					std::cout << SI->prefix() << "\n";
-					unit.add("Prefix.ClassString", prefixes[SI->prefix()]);
+				if (SI){
+					unit.add("Kind.ClassString", "SI system");
+					if (SI->name() >= 0){ unit.add("Name.ClassString", unit_names[SI->name()]); }
+					if (SI->prefix() >= 0){
+						std::cout << SI->prefix() << "\n";
+						unit.add("Prefix.ClassString", prefixes[SI->prefix()]);
+					}
 				}
 			}
 		}
@@ -207,7 +209,9 @@ std::string handleGeometry(Workpiece * wkpc, ptree* tree){
 	ptree& dat = tree->add("n0:Uos.DataContainer.GeometricCoordinateSpace", "");
 	dat.add("<xmlattr>.uid", "gcs--" + std::to_string(uid));
 	auto gc = Geometric_context::find(srep->context_of_items());
-	dat.add("DimensionCount", gc->get_dimensions());
+	if (gc){
+		dat.add("DimensionCount", gc->get_dimensions());
+	}
 	//handle units
 	//handle getting uncertainty
 	dat.add("Id.<xmlattr>.id", wkpc->get_its_id());
@@ -238,6 +242,13 @@ void makePart(Workpiece * wkpc, ptree* tree){
 	pd = wkpc->getRoot();
 	pd->findObjects(&children, INT_MAX, false);
 
+	uidTracker* mgr = uidTracker::find(pd);
+	if (mgr){
+		if (mgr->getUid()){
+			currentUid = mgr->getUid();
+		}
+	}
+
 	ptree& part = tree->add(std::string("n0:Uos.DataContainer.Part"), "");
 	part.add("<xmlattr>.id", pd->domain()->name() + std::string("--") + std::to_string(currentUid));
 
@@ -245,7 +256,7 @@ void makePart(Workpiece * wkpc, ptree* tree){
 	xmlObj.add("<xmlattr>.id", wkpc->get_its_id() );
 
 	xmlObj.add("Identifier", "");
-	xmlObj.add("Identifier.<xmlattr>.uid", "pid--" + std::to_string(uid) + "--id" + std::to_string(id_count));
+	xmlObj.add("Identifier.<xmlattr>.uid", "pid--" + std::to_string(currentUid) + "--id" + std::to_string(id_count));
 
 	xmlObj.add("Identifier.<xmlattr>.id", wkpc->get_its_id());
 	xmlObj.add("Identifier.<xmlattr>.idContextRef", "create references");
@@ -279,29 +290,30 @@ void makePart(Workpiece * wkpc, ptree* tree){
 	std::string geoRef = handleGeometry(wkpc, tree);	//ptree& geoRep = tree->add("n0:Uos.DataContainer.GeometricRepresentation", "");
 	pv.put("DefiningGeometry.<xmlattr>.uidRef", geoRef);
 	//do single occurence, 
-	uidTracker* mgr = uidTracker::find(pd);
 	if (mgr){
 		if (mgr->getPV()){
 			ptree& pi = pv.add("Occurrence", "");
 			pi.add("<xmlattr>.xsi:type", "n0:SingleOccurrence");
-			pi.add("<xmlattr>.uid", "pi--" + std::to_string(uid) + "--id" + std::to_string(id_count));
+			pi.add("<xmlattr>.uid", "pi--" + std::to_string(mgr->getUid()) + "--id" + std::to_string(mgr->getOccurence()));
 			pi.add("Id.<xmlattr>. id", pd->formation()->of_product()->name() + std::string(".") + std::to_string(mgr->getOccurence()));
 			std::cout << "Occurrence: " << pd->formation()->of_product()->name() << "\n";
 			pi.add("PropertyValueAssignment.<xmlattr>.uid", "pva--" + std::to_string(currentUid));
+			mgr->occurence++;
 		}
 	}
-
+	//do NAUOs
 	StixMgrAsmProduct * pm = StixMgrAsmProduct::find(pd);
 	for (unsigned i = 0; i < pm->child_nauos.size();i++){
 		ptree& pi = pv.add("ViewOccurrenceRelationship", "");
 		std::cout << stix_get_related_pdef(pm->child_nauos[i])->formation()->of_product()->name() << "\n";
 		uidTracker* mgr = uidTracker::make(stix_get_related_pdef(pm->child_nauos[i])); //may need to label something different
+		uid++;
+		mgr->setUid(uid);
 		mgr->setPV(&pv);
-		mgr->occurence++;
 		std::cout << mgr->occurence << "\n";
-		mgr->setUid("pi--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence));
-		pi.add("<xmlattr>.uid", mgr->getUid());
+		pi.add("<xmlattr>.uid", "pi--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence));
 		pi.add("<xmlattr>.xsi:type", std::string("n0:") + pm->child_nauos[i]->domain()->name());
+		pi.add("Related.<xmlattr>.uidRef", "pi--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence));
 		pi.add("Id.<xmlattr>.id", pm->child_nauos[i]->id() + std::string(".") + std::to_string(mgr->getOccurence()));
 		pi.add("Description", pm->child_nauos[i]->description());
 		pi.add("PropertyValueAssignment.<xmlattr>.uidRef", "pva--" + std::to_string(currentUid));

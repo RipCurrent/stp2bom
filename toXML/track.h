@@ -10,17 +10,21 @@
 
 class uidTracker : public RoseManager{
 private:
-	boost::property_tree::ptree * partViewTree;
-	std::string		uid;
+	boost::property_tree::ptree *	partViewTree;
+	std::string						Suid;
+	int								uid;
 
 public:
 
 	ROSE_DECLARE_MANAGER_COMMON();
 
-	void setUid(std::string u)		{ uid = u; }
-	std::string getUid()			{ return uid; }
+	void setUid(int u)		{ uid = u; }
+	int getUid()			{ return uid; }
 
-	int occurence = 0;
+	void setUid(std::string u)		{ Suid = u; }
+	std::string getSUid()			{ return Suid; }
+
+	int occurence = 1;
 	int getOccurence()				{ return occurence; }
 
 	void setPV(boost::property_tree::ptree* t)			{ partViewTree = t; }
