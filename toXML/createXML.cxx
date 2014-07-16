@@ -310,6 +310,11 @@ void makePart(Workpiece * wkpc, ptree* tree){
 		uidTracker* mgr = uidTracker::make(stix_get_related_pdef(pm->child_nauos[i])); //may need to label something different
 		std::cout << stix_get_related_pdef(pm->child_nauos[i])->formation()->of_product()->name() << "\n" << mgr->getOccurence() << "\n";
 		if (!mgr->getUid()){ uid++; mgr->setUid(uid); }
+		if (mgr->getPV()){ 
+			//if not in specified occurance chain
+				//start chain
+			//else continue chain
+		}
 		mgr->setPV(&pv);
 		pi.add("<xmlattr>.uid", "pi--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence));
 		pi.add("<xmlattr>.xsi:type", std::string("n0:") + pm->child_nauos[i]->domain()->name());
