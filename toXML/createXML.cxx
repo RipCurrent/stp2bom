@@ -126,7 +126,7 @@ void doUnits(Workpiece * wkpc, ptree* tree){
 				}
 			}
 		}
-		std::cout << gc->get_plane_angle_unit()->domain()->name() << "\n";
+		//std::cout << gc->get_plane_angle_unit()->domain()->name() << "\n";
 		auto pa_u = gc->get_plane_angle_unit();
 		if (pa_u){
 			uidTracker* mgr = uidTracker::find(gc->get_plane_angle_unit());
@@ -146,13 +146,13 @@ void doUnits(Workpiece * wkpc, ptree* tree){
 				}
 				else if (conversion_unit){
 					unit.add("Kind.ClassString", "Conversion Based system");
-					std::cout << conversion_unit->name() << "\n";
+					//std::cout << conversion_unit->name() << "\n";
 					unit.add("Name.ClassString", conversion_unit->name());
 
 				}
 			}
 		}
-		std::cout << gc->get_solid_angle_unit()->domain()->name() << "\n";
+		//std::cout << gc->get_solid_angle_unit()->domain()->name() << "\n";
 		auto sa_u = gc->get_solid_angle_unit();
 		if (sa_u){
 			uidTracker* mgr = uidTracker::find(gc->get_solid_angle_unit());
@@ -168,7 +168,7 @@ void doUnits(Workpiece * wkpc, ptree* tree){
 					unit.add("Kind.ClassString", "SI system");
 					if (SI->name() >= 0){ unit.add("Name.ClassString", unit_names[SI->name()]); }
 					if (SI->prefix() >= 0){
-						std::cout << SI->prefix() << "\n";
+						//std::cout << SI->prefix() << "\n";
 						unit.add("Prefix.ClassString", prefixes[SI->prefix()]);
 					}
 				}
@@ -293,11 +293,11 @@ void makePart(Workpiece * wkpc, ptree* tree){
 	//do single occurence, 
 	if (mgr){
 		if (mgr->getPV()){
-			for (i = 0; i < mgr->getOccurence(); i++){
+			for (i = 1; i < mgr->getOccurence(); i++){
 				ptree& pi = pv.add("Occurrence", "");
 				pi.add("<xmlattr>.xsi:type", "n0:SingleOccurrence");
-				pi.add("<xmlattr>.uid", "pi--" + std::to_string(mgr->getUid()) + "--id" + std::to_string(mgr->getOccurence() - (i+1)) );
-				pi.add("Id.<xmlattr>. id", pd->formation()->of_product()->name() + std::string(".") + std::to_string(mgr->getOccurence() - (i + 1)) );
+				pi.add("<xmlattr>.uid", "pi--" + std::to_string(mgr->getUid()) + "--id" + std::to_string(mgr->getOccurence() - (i)) );
+				pi.add("Id.<xmlattr>. id", pd->formation()->of_product()->name() + std::string(".") + std::to_string(mgr->getOccurence() - (i)) );
 				std::cout << "Occurrence: " << pd->formation()->of_product()->name() << "\n";
 				pi.add("PropertyValueAssignment.<xmlattr>.uid", "pva--" + std::to_string(currentUid));
 			}
@@ -312,10 +312,9 @@ void makePart(Workpiece * wkpc, ptree* tree){
 		std::cout << stix_get_related_pdef(pm->child_nauos[i])->formation()->of_product()->name() << "\n" << mgr->getOccurence() << "\n";
 		if (mgr->getUid() == 0){ 
 			uid++; 
-			std::cout << uid << "\n";
 			mgr->setUid(uid); 
 		}
-		if (mgr->getPV()){ 
+		else{ //specified occurnce
 			//if not in specified occurrence chain
 				//start chain
 			
@@ -435,7 +434,7 @@ int main(int argc, char* argv[]){
 	cur.traverse(master);
 	cur.domain(NULL);
 	while (a_obj = cur.next()){
-		std::cout << a_obj->getModuleName() << std::endl;
+		//std::cout << a_obj->getModuleName() << std::endl;
 	}
 
 	write_xml(std::string(master->fileDirectory() + name), tree, std::locale(), xml_writer_settings<char>(' ', 4));
