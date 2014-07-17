@@ -306,17 +306,22 @@ void makePart(Workpiece * wkpc, ptree* tree){
 	//do NAUOs
 	StixMgrAsmProduct * pm = StixMgrAsmProduct::find(pd);
 	for (i = 0; i < pm->child_nauos.size();i++){
+		//uid++; 
 		ptree& pi = pv.add("ViewOccurrenceRelationship", "");
 		uidTracker* mgr = uidTracker::make(stix_get_related_pdef(pm->child_nauos[i])); //may need to label something different
 		std::cout << stix_get_related_pdef(pm->child_nauos[i])->formation()->of_product()->name() << "\n" << mgr->getOccurence() << "\n";
-		if (!mgr->getUid()){ uid++; mgr->setUid(uid); }
+		if (mgr->getUid() == 0){ 
+			uid++; 
+			std::cout << uid << "\n";
+			mgr->setUid(uid); 
+		}
 		if (mgr->getPV()){ 
-			//if not in specified occurance chain
+			//if not in specified occurrence chain
 				//start chain
-			//else continue chain
+			
 		}
 		mgr->setPV(&pv);
-		pi.add("<xmlattr>.uid", "pi--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence));
+		pi.add("<xmlattr>.uid", "pvvid--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence));
 		pi.add("<xmlattr>.xsi:type", std::string("n0:") + pm->child_nauos[i]->domain()->name());
 		pi.add("Related.<xmlattr>.uidRef", "pi--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence));
 		pi.add("Id.<xmlattr>.id", pm->child_nauos[i]->id() + std::string(".") + std::to_string(mgr->getOccurence()));
@@ -324,6 +329,8 @@ void makePart(Workpiece * wkpc, ptree* tree){
 		pi.add("PropertyValueAssignment.<xmlattr>.uidRef", "pva--" + std::to_string(currentUid));
 		mgr->occurence++;
 	}
+
+	//specified occurrences?
 
 	ptree& pva = pv.add("PropertyValueAssignment", "");
 	pva.add("<xmlattr>.uid", "pva--" + std::to_string(currentUid));
@@ -348,7 +355,7 @@ void makePart(Workpiece * wkpc, ptree* tree){
 
 void copyHeader(ptree* tree, RoseDesign* master){
 	unsigned i, sz;
-	//place holder. ask what needs to go in header on monday
+	//TODO: place holder. ask what needs to go in header on monday
 	master->initialize_header();
 
 	ptree& head = tree->add("n0:Uos.Header", "");

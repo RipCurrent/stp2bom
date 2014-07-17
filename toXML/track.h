@@ -12,7 +12,7 @@ class uidTracker : public RoseManager{
 private:
 	boost::property_tree::ptree *	partViewTree;
 	std::string						Suid;
-	int								uid;
+	unsigned						uid=0;
 
 public:
 
