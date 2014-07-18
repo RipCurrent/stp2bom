@@ -33,48 +33,90 @@ unsigned id_count = 1;
 const std::string prefixes[] = { "exa", "peta", "tera", "giga", "mega", "kilo", "hecto", "deca", "deci", "centi", "milli", "micro", "nano", "pico", "femto", "atto" };
 const std::string unit_names[] = { "metre",	"gram",	"second",	"ampere",	"kelvin",	"mole",	"candela",	"radian",	"steradian",	"hertz",	"newton",	"pascal",	"joule",	"watt",	"coulomb",	"volt",	"farad",	"ohm",	"siemens",	"weber",	"tesla",	"henry",	"degree_celsius",	"lumen",	"lux",	"becquerel",	"gray",	"sievert" };
 
-void convertEntity(ptree* scope, RoseObject* ent, int currentUid){ //make it dumb so that it can be used on geomertry objects as well
-	RoseObject* obj;
+void do_nauos(stp_product_definition* pd, ptree* pv, int currentUid);
+void add_simple(ptree* scope, RoseAttribute* att, RoseObject* ent, std::string name);
+
+void convertEntity(ptree* scope, RoseObject* ent, int currentUid, std::string name = ""){ //make it dumb so that it can be used on geomertry objects as well
+	RoseObject* obj = ent;
 	auto atts = ent->attributes();
 	if (!ent){ std::cout << "ent is null. WHERE IS YOUR GOD NOW! \n"; }
 	for (unsigned i = 0, sz = atts->size(); i < sz; i++){
 		RoseAttribute* att = atts->get(i);
 		if (att->isEntity()){ //att points to another object //recurse!
 			obj = ent->getObject(att);
-			convertEntity(scope, obj, uid);
-			//scope->add()
+			convertEntity(scope, obj, uid, att->name());
 		}
 
 		if (att->isAggregate()){//recurse!
 			obj = ent->getObject(att);
 			std::string derp;
-			for (unsigned j = 0, sz = obj->size(); j < sz; j++){
-				derp += std::to_string(obj->getDouble(j) ); 
-				//std::cout << obj << "\n";
-				derp += " ";
+			if (obj->attributes()->get(0)->isEntity()){
+				std::cout << "Aggregate has multiple attributes " << obj->domain()->name() << "\n"; //currently this makes it ignore manifold solid brep and all of its possible children
 			}
-			scope->add(att->name(), derp);
+			else{
+				for (unsigned j = 0, sz = obj->size(); j < sz; j++){
+					if (obj->domain() == ROSE_DOMAIN(ListOfint)){
+						derp += std::to_string(obj->getInteger(j));
+					}
+					else if (obj->domain() == ROSE_DOMAIN(ListOfdouble)){
+						derp += std::to_string(obj->getDouble(j));
+					}
+					else if (obj->domain() == ROSE_DOMAIN(ListOffloat)){
+						derp += std::to_string(obj->getFloat(j));
+					}
+					derp += " ";
+				}
+				if (name.size() > 0){
+					scope->add(name, derp);
+				}
+				else{
+					scope->add(att->name(), derp);
+				}
+			}
 		}
 		else if (att->isSelect()){//recurse!
 			obj = rose_get_nested_object(ROSE_CAST(RoseUnion, ent->getObject(att)));
 			std::cout << att->name() << "is select\n";
 		}
 		else if (att->isSimple()){//store this!
-			if (att->isString()){
-				if (strcmp("NONE", ent->getString(att)) && strcmp("", ent->getString(att))){
-					scope->add(att->name(), ent->getString(att));
-				}
-			}
-			else if(att->isInteger()){
-				scope->add(att->name(), ent->getInteger(att) );
-			}
-			else if (att->isDouble()){
-				scope->add(att->name(), ent->getDouble(att));
-			}
-			else if (att->isFloat()){
-				scope->add(att->name(), ent->getFloat(att));
-			}
+			add_simple(scope, att, ent, name);
+		}
+	}
+}
 
+void add_simple(ptree* scope, RoseAttribute* att, RoseObject* ent, std::string name){
+	if (att->isString()){
+		if (strcmp("NONE", ent->getString(att)) && strcmp("", ent->getString(att))){
+			if (name.size() > 0){
+				scope->add(name, ent->getString(att));
+			}
+			else{
+				scope->add(att->name(), ent->getString(att));
+			}
+		}
+	}
+	else if (att->isInteger()){
+		if (name.size() > 0){
+			scope->add(name, ent->getInteger(att));
+		}
+		else{
+			scope->add(att->name(), ent->getInteger(att));
+		}
+	}
+	else if (att->isDouble()){
+		if (name.size() > 0){
+			scope->add(name, ent->getDouble(att));
+		}
+		else{
+			scope->add(att->name(), ent->getDouble(att));
+		}
+	}
+	else if (att->isFloat()){
+		if (name.size() > 0){
+			scope->add(name, ent->getFloat(att));
+		}
+		else{
+			scope->add(att->name(), ent->getFloat(att));
 		}
 	}
 }
@@ -88,7 +130,7 @@ void exchangeContext(ptree* scope, RoseDesign* des){
 	exchange.add("<xmlattr>.uid", "ExchangeContext--" + std::to_string(uid));
 	curse.domain(ROSE_DOMAIN(stp_language));
 	curse.traverse(des);
-	if (curse.size() > 0){ std::cout << curse.size() << "\n"; }
+	if (curse.size() > 0){ i = 0; }
 	else{ exchange.add("DefaultLanguage", "English"); }
 	//units
 	//deal with making ref to units later
@@ -220,11 +262,19 @@ std::string handleGeometry(Workpiece * wkpc, ptree* tree){
 	for (unsigned j = 0, sz = srep->items()->size(); j < sz; j++){
 		//children[j] is every RoseObject that is geometry
 		RoseAttribute* att = srep->getAttribute("items");
-		ptree& repItem = items.add(srep->items()->className(), "");
-		uid++;
-		repItem.add("<xmlattr>.uid", srep->items()->get(j) ->domain()->name() + std::string("--") + std::to_string(uid));
-		repItem.add("<xmlattr>.xsi:type", std::string("n1:") + srep->items()->get(j)->domain()->name());
-		convertEntity(&repItem , srep->items()->get(j), currentUid);
+		if (srep->items()->get(j)->domain() != ROSE_DOMAIN(stp_manifold_solid_brep)){
+			ptree& repItem = items.add("RepresentationItem", "");
+			uid++;
+			if (srep->items()->get(j)->isa(ROSE_DOMAIN(stp_placement))){
+				repItem.add("<xmlattr>.uid", srep->items()->get(j)->domain()->name() + std::string("--") + std::to_string(uid));
+				repItem.add("<xmlattr>.xsi:type", "n1:AxisPlacement");
+			}
+			else{
+				repItem.add("<xmlattr>.uid", srep->items()->get(j)->domain()->name() + std::string("--") + std::to_string(uid));
+				repItem.add("<xmlattr>.xsi:type", std::string("n1:") + srep->items()->get(j)->domain()->name());
+			}
+			convertEntity(&repItem, srep->items()->get(j), currentUid);
+		}
 	}
 
 	return uidForRef;
@@ -290,47 +340,28 @@ void makePart(Workpiece * wkpc, ptree* tree){
 
 	std::string geoRef = handleGeometry(wkpc, tree);	//ptree& geoRep = tree->add("n0:Uos.DataContainer.GeometricRepresentation", "");
 	pv.put("DefiningGeometry.<xmlattr>.uidRef", geoRef);
-	//do single occurence, 
+	///do single occurence, 
 	if (mgr){
 		if (mgr->getPV()){
 			for (i = 1; i < mgr->getOccurence(); i++){
 				ptree& pi = pv.add("Occurrence", "");
 				pi.add("<xmlattr>.xsi:type", "n0:SingleOccurrence");
-				pi.add("<xmlattr>.uid", "pi--" + std::to_string(mgr->getUid()) + "--id" + std::to_string(mgr->getOccurence() - (i)) );
-				pi.add("Id.<xmlattr>. id", pd->formation()->of_product()->name() + std::string(".") + std::to_string(mgr->getOccurence() - (i)) );
-				std::cout << "Occurrence: " << pd->formation()->of_product()->name() << "\n";
+				pi.add("<xmlattr>.uid", "pi--" + std::to_string(mgr->getUid()) + "--id" + std::to_string((i)) );
+				pi.add("Id.<xmlattr>. id", pd->formation()->of_product()->name() + std::string(".") + std::to_string((i)) );
+				std::cout << "Occurrence: " << pd->formation()->of_product()->name() << ", " << mgr->getOccurence() - 1 << "\n";
 				pi.add("PropertyValueAssignment.<xmlattr>.uid", "pva--" + std::to_string(currentUid));
+			}
+			uid++;
+			if (mgr->getOccurence() > 2 && mgr->needsSpecifiedOccurrence){
+				ptree& pi = pv.add("Occurrence", "");
+				pi.add("<xmlattr>.xsi:type", "n0:SpecifiedOccurrence");
+				pi.add("<xmlattr>.uid", "spo--" + std::to_string(uid) );
+				pi.add("AssemblyContext.<xmlattr>.uidRef", mgr->getAssemblyContext());
+				//pi.add("SubAssemblyRelationship.<xmlattr>.uidRef", )
 			}
 		}
 	}
-	//do NAUOs
-	StixMgrAsmProduct * pm = StixMgrAsmProduct::find(pd);
-	for (i = 0; i < pm->child_nauos.size();i++){
-		//uid++; 
-		ptree& pi = pv.add("ViewOccurrenceRelationship", "");
-		uidTracker* mgr = uidTracker::make(stix_get_related_pdef(pm->child_nauos[i])); //may need to label something different
-		std::cout << stix_get_related_pdef(pm->child_nauos[i])->formation()->of_product()->name() << "\n" << mgr->getOccurence() << "\n";
-		if (mgr->getUid() == 0){ 
-			uid++; 
-			mgr->setUid(uid); 
-		}
-		else{ //specified occurnce
-			//if not in specified occurrence chain
-				//start chain
-			
-		}
-		mgr->setPV(&pv);
-		pi.add("<xmlattr>.uid", "pvvid--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence));
-		pi.add("<xmlattr>.xsi:type", std::string("n0:") + pm->child_nauos[i]->domain()->name());
-		pi.add("Related.<xmlattr>.uidRef", "pi--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence));
-		pi.add("Id.<xmlattr>.id", pm->child_nauos[i]->id() + std::string(".") + std::to_string(mgr->getOccurence()));
-		pi.add("Description", pm->child_nauos[i]->description());
-		pi.add("PropertyValueAssignment.<xmlattr>.uidRef", "pva--" + std::to_string(currentUid));
-		mgr->occurence++;
-	}
-
-	//specified occurrences?
-
+	do_nauos(pd, &pv, currentUid); //deals with objects below the current product in a tree view of the design while maintaining acg
 	ptree& pva = pv.add("PropertyValueAssignment", "");
 	pva.add("<xmlattr>.uid", "pva--" + std::to_string(currentUid));
 	doPartProperty(&pva, pd);
@@ -339,18 +370,47 @@ void makePart(Workpiece * wkpc, ptree* tree){
 	return;
 }
 
-/*void do_nauo(Workpiece* wkpc, ptree* tree){
-	stp_product_definition* pd = wkpc->getRoot();
+void do_nauos(stp_product_definition* pd, ptree* pv, int currentUid){
 	StixMgrAsmProduct * pm = StixMgrAsmProduct::find(pd);
+	uidTracker* pgMgr = uidTracker::find(pd);
 	for (unsigned i = 0; i < pm->child_nauos.size(); i++){
-		uidTracker* mgr = uidTracker::find(pd);
-		if (mgr){
-			ptree* pv = mgr->getPV();
-			ptree& viewOcc = pv->add("ViewOccurrenceRelationship", "");
-			viewOcc.add("<xmlattr>.uid", "");
+		//uid++; 
+		ptree& pi = pv->add("ViewOccurrenceRelationship", "");
+		uidTracker* mgr = uidTracker::make(stix_get_related_pdef(pm->child_nauos[i])); //may need to label something different
+		std::cout << stix_get_related_pdef(pm->child_nauos[i])->formation()->of_product()->name() << mgr->getOccurence() << "\n";
+		if (mgr->getUid() == 0){
+			uid++;
+			mgr->setUid(uid); 
+			if (pgMgr){
+				if (pgMgr->needsSpecifiedOccurrence){
+					mgr->needsSpecifiedOccurrence = true;
+					mgr->setAssemblyContext(pgMgr->getAssemblyContext());
+				}
+			}
+		}
+		else{ //specified occurnce
+			mgr->needsSpecifiedOccurrence = true; //child parts require (occurence-1) specified occurrences
+			// use a list attached to nauo or pd to keep an ordered of how many single occurrences are needed?
+		}
+
+		mgr->setPV(pv);
+		pi.add("<xmlattr>.uid", "pvvid--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence));
+		pi.add("<xmlattr>.xsi:type", std::string("n0:") + pm->child_nauos[i]->domain()->name());
+		pi.add("Related.<xmlattr>.uidRef", "pi--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence));
+		pi.add("Id.<xmlattr>.id", pm->child_nauos[i]->id() + std::string(".") + std::to_string(mgr->getOccurence()));
+		pi.add("Description", pm->child_nauos[i]->description());
+		pi.add("PropertyValueAssignment.<xmlattr>.uidRef", "pva--" + std::to_string(currentUid));
+		mgr->occurence++;
+
+		if (!mgr->needsSpecifiedOccurrence){
+			std::cout << "Set context.\n";
+			mgr->setAssemblyContext("pvv--" + std::to_string(currentUid) + "--id" + std::to_string(id_count) );
 		}
 	}
-}*/
+	std::cout << "Parent nauo of " << pd->formation()->of_product()->name() << ": " << pm->parent_nauos.size() << "\n";
+	// if mgr->occurnce on pd is > 2 then multiple exist. 
+	//specified occurrences?
+}
 
 void copyHeader(ptree* tree, RoseDesign* master){
 	unsigned i, sz;
