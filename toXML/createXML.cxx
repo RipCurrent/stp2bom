@@ -16,9 +16,6 @@
 #include <stix_property.h>
 #include <stix_split.h>
 
-//#include <boost/property_tree/ptree.hpp>
-//#include <boost/property_tree/xml_parser.hpp>
-
 #include "track.h"
 #include "ROSERange.h"
 #pragma comment(lib,"stpcad_stix.lib")
@@ -67,7 +64,12 @@ void convertEntity(ptree* scope, RoseObject* ent, int currentUid, std::string na
 					derp += " ";
 				}
 				if (name.size() > 0){
-					scope->add(name, derp);
+					if (strcmp("location", name.c_str())){
+						scope->add(name, derp);
+					}
+					else{
+						scope->add("postion", derp);
+					}
 				}
 				else{
 					scope->add(att->name(), derp);
@@ -351,9 +353,10 @@ void makePart(Workpiece * wkpc, ptree* tree){
 					pi.add("<xmlattr>.uid", "spo--" + std::to_string(uid));
 					pi.add("AssemblyContext.<xmlattr>.uidRef", mgr->getAssemblyContext());
 					//pi.add("SubAssemblyRelationship.<xmlattr>.uidRef", )
+					pi.add("UpperAssemblyRelationship.<xmlattr>.uidRef", "");
 				}
 			}
-			uid++;
+			//uid++;
 			for (i = 0; i < pm->parent_nauos.size() ; i++){
 				ptree& pi = pv.add("Occurrence", "");
 				pi.add("<xmlattr>.xsi:type", "n0:SingleOccurrence");
@@ -383,7 +386,7 @@ void do_nauos(stp_product_definition* pd, ptree* pv, int currentUid){
 		std::cout << stix_get_related_pdef(pm->child_nauos[i])->formation()->of_product()->name() << mgr->getOccurence() << "\n";
 		if (mgr->getUid() == 0){
 			uid++;
-			mgr->setUid(uid); 
+			mgr->setUid(uid);
 			if (pgMgr){
 				if (pgMgr->needsSpecifiedOccurrence){
 					mgr->needsSpecifiedOccurrence = true;
@@ -407,12 +410,23 @@ void do_nauos(stp_product_definition* pd, ptree* pv, int currentUid){
 
 		if (!mgr->needsSpecifiedOccurrence){
 			std::cout << "Set context.\n";
-			mgr->setAssemblyContext("pvv--" + std::to_string(currentUid) + "--id" + std::to_string(id_count) );
+			mgr->setAssemblyContext("pvv--" + std::to_string(currentUid) + "--id" + std::to_string(id_count));
 		}
 	}
 	std::cout << "Parent nauo of " << pd->formation()->of_product()->name() << ": " << pm->parent_nauos.size() << "\n";
-	// if mgr->occurnce on pd is > 2 then multiple exist. 
-	//specified occurrences?
+	//specified occurrences
+	for (unsigned i = 0; i < pm->child_nauos.size(); i++){
+		if (pgMgr){
+			if (pgMgr->getOccurence() > 2 && pgMgr->needsSpecifiedOccurrence){//need to have it check occurrences of the parent design?
+				for (i = 1; i < pgMgr->occurence; i++){
+					for (unsigned i = 0; i < pm->child_nauos.size(); i++){//set Upper Assemly Relationship
+						//ptree& pi = pv->add("Occurrence", "");
+						//pi.add("UpperAssemblyRelationship.<xmlattr>.uidRef", "");
+					}
+				}
+			}
+		}
+	}
 }
 
 void copyHeader(ptree* tree, RoseDesign* master){
