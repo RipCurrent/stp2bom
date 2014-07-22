@@ -341,25 +341,28 @@ void makePart(Workpiece * wkpc, ptree* tree){
 	std::string geoRef = handleGeometry(wkpc, tree);	//ptree& geoRep = tree->add("n0:Uos.DataContainer.GeometricRepresentation", "");
 	pv.put("DefiningGeometry.<xmlattr>.uidRef", geoRef);
 	///do single occurence, 
+	StixMgrAsmProduct * pm = StixMgrAsmProduct::find(pd);
 	if (mgr){
 		if (mgr->getPV()){
-			for (i = 1; i < mgr->getOccurence(); i++){
+			if (mgr->getOccurence() > 2 && mgr->needsSpecifiedOccurrence){//need to have it check occurrences of the parent design?
+				for (i = 1; i < mgr->occurence; i++){
+					ptree& pi = pv.add("Occurrence", "");
+					pi.add("<xmlattr>.xsi:type", "n0:SpecifiedOccurrence");
+					pi.add("<xmlattr>.uid", "spo--" + std::to_string(uid));
+					pi.add("AssemblyContext.<xmlattr>.uidRef", mgr->getAssemblyContext());
+					//pi.add("SubAssemblyRelationship.<xmlattr>.uidRef", )
+				}
+			}
+			uid++;
+			for (i = 0; i < pm->parent_nauos.size() ; i++){
 				ptree& pi = pv.add("Occurrence", "");
 				pi.add("<xmlattr>.xsi:type", "n0:SingleOccurrence");
 				pi.add("<xmlattr>.uid", "pi--" + std::to_string(mgr->getUid()) + "--id" + std::to_string((i)) );
 				pi.add("Id.<xmlattr>. id", pd->formation()->of_product()->name() + std::string(".") + std::to_string((i)) );
-				std::cout << "Occurrence: " << pd->formation()->of_product()->name() << ", " << mgr->getOccurence() - 1 << "\n";
 				pi.add("PropertyValueAssignment.<xmlattr>.uid", "pva--" + std::to_string(currentUid));
 			}
-			uid++;
-			if (mgr->getOccurence() > 2 && mgr->needsSpecifiedOccurrence){
-				ptree& pi = pv.add("Occurrence", "");
-				pi.add("<xmlattr>.xsi:type", "n0:SpecifiedOccurrence");
-				pi.add("<xmlattr>.uid", "spo--" + std::to_string(uid) );
-				pi.add("AssemblyContext.<xmlattr>.uidRef", mgr->getAssemblyContext());
-				//pi.add("SubAssemblyRelationship.<xmlattr>.uidRef", )
-			}
 		}
+		std::cout << "Occurrence: " << pd->formation()->of_product()->name() << ", " << pm->parent_nauos.size() << "\n";
 	}
 	do_nauos(pd, &pv, currentUid); //deals with objects below the current product in a tree view of the design while maintaining acg
 	ptree& pva = pv.add("PropertyValueAssignment", "");
@@ -434,6 +437,19 @@ void copyHeader(ptree* tree, RoseDesign* master){
 	}
 
 
+}
+
+int CountSubs(stp_product_definition * root){ //return the total count of subassemblies in a product
+	unsigned subs = 0;
+	StixMgrAsmProduct * pm = StixMgrAsmProduct::find(root);
+	if (pm->child_nauos.size()) {
+		unsigned i, sz;
+		for (i = 0, sz = pm->child_nauos.size(); i < sz; i++){
+			subs += CountSubs(stix_get_related_pdef(pm->child_nauos[i]));
+		}
+		subs += sz;
+	}
+	return subs;
 }
 
 int main(int argc, char* argv[]){
