@@ -9,7 +9,6 @@
 #include <map>
 #include <iostream>
 #include <cstdio>
-#include <ARM.h>
 #include <ctype.h>
 #include <stix_asm.h>
 #include <stix_tmpobj.h>
@@ -48,7 +47,7 @@ void convertEntity(ptree* scope, RoseObject* ent, int currentUid, std::string na
 			obj = ent->getObject(att);
 			std::string derp;
 			if (obj->attributes()->get(0)->isEntity()){
-				std::cout << "Aggregate has multiple attributes " << obj->domain()->name() << "\n"; //currently this makes it ignore manifold solid brep and all of its possible children
+				std::cout << "Aggregate has multiple levels of attributes " << obj->domain()->name() << "\n"; //currently this makes it ignore manifold solid brep and all of its possible children
 			}
 			else{
 				for (unsigned j = 0, sz = obj->size(); j < sz; j++){
@@ -77,8 +76,13 @@ void convertEntity(ptree* scope, RoseObject* ent, int currentUid, std::string na
 			}
 		}
 		else if (att->isSelect()){//recurse!
-			obj = rose_get_nested_object(ROSE_CAST(RoseUnion, ent->getObject(att)));
-			std::cout << att->name() << "is select\n";
+			obj = ent->getObject(att);
+			if (obj){ 
+				if (obj->domain() == ROSE_DOMAIN(stp_measure_value)){
+					auto tmp = ROSE_CAST(stp_measure_value, obj);
+					scope->add(ent->getAttribute("name")->getString(), tmp->_length_measure());
+				}
+			}
 		}
 		else if (att->isSimple()){//store this!
 			add_simple(scope, att, ent, name);
@@ -88,9 +92,11 @@ void convertEntity(ptree* scope, RoseObject* ent, int currentUid, std::string na
 
 void add_simple(ptree* scope, RoseAttribute* att, RoseObject* ent, std::string name){
 	if (att->isString()){
-		if (strcmp("NONE", ent->getString(att)) && strcmp("", ent->getString(att))){
+		if (strcmp("NONE", ent->getString(att)) && strcmp("", ent->getString(att))  ){
 			if (name.size() > 0){
-				scope->add(name, ent->getString(att));
+				if (strcmp("uncertainty_measure_with_unit", name.c_str())){
+					scope->add(name, ent->getString(att));
+				}
 			}
 			else{
 				scope->add(att->name(), ent->getString(att));
@@ -148,7 +154,7 @@ void exchangeContext(ptree* scope, RoseDesign* des){
 	}
 }
 
-void doUnits(Workpiece * wkpc, ptree* tree){
+/*void doUnits(Workpiece * wkpc, ptree* tree){
 	auto gc = Geometric_context::find(wkpc->get_its_geometry()->context_of_items());
 	if (gc){
 		auto l_u = gc->get_length_unit();
@@ -226,7 +232,7 @@ void doShapeDependentProperty(Workpiece * wkpc, ptree* tree){ //waiting for joe 
 	ptree& sdp = tree->add("ShapeDependentProperty", "");
 	sdp.add("<xlmattr>.uid", "sdp--" + std::to_string(uid));
 	sdp.add("<xlmattr>.xsi:type", "n1:GeneralShapeDependentProperty");
-}
+}*/
 
 void doPartProperty(ptree* tree, RoseObject* ent){//filler code for demo
 	uid++;
@@ -239,9 +245,10 @@ void doPartProperty(ptree* tree, RoseObject* ent){//filler code for demo
 	pv.add("ValueComponent.CharacterString", "Step Tools Inc");
 }
 
-std::string handleGeometry(Workpiece * wkpc, ptree* tree){
+std::string handleGeometry(stp_shape_definition_representation* sdr, ptree* tree){
 	//returns the uid for the created geometricrepresentation  for use in PartView and storing geometry
-	stp_shape_representation* srep = wkpc->get_its_geometry();
+	stp_shape_representation* srep = ROSE_CAST(stp_shape_representation, sdr->used_representation());
+	stp_product_definition* pd = ROSE_CAST(stp_product_definition, rose_get_nested_object(ROSE_CAST(stp_product_definition_shape, rose_get_nested_object(sdr->definition()))->definition()));
 	uid++;
 	int currentUid = uid;
 	std::string uidForRef("gm--" + std::to_string(currentUid));
@@ -252,13 +259,40 @@ std::string handleGeometry(Workpiece * wkpc, ptree* tree){
 	geo.add( srep->context_of_items()->className() + std::string(".<xmlattr>.uidRef"), "gcs--" + std::to_string(uid));
 	ptree& dat = tree->add("n0:Uos.DataContainer.GeometricCoordinateSpace", "");
 	dat.add("<xmlattr>.uid", "gcs--" + std::to_string(uid));
-	auto gc = Geometric_context::find(srep->context_of_items());
-	if (gc){
-		dat.add("DimensionCount", gc->get_dimensions());
+	auto gc = srep->context_of_items(); 
+	RoseAttribute* tmpAtt = gc->getAttribute("coordinate_space_dimension");
+	dat.add("DimensionCount", gc->getInteger(tmpAtt));
+
+	for (unsigned i = 0; i < gc->attributes()->size(); i++){
+		RoseAttribute* att = gc->attributes()->get(i);
+		std::cout << gc->attributes()->get(i)->name() << ": ";
+		if (att->isSimple()){
+			if (att->isInteger()){ std::cout << gc->getInteger(att) << "int\n";	}
+		}
+		else{
+			if (att->isSelect()){
+				RoseObject* obj = rose_get_nested_object(ROSE_CAST(RoseUnion, gc->getObject(att)));
+				std::cout << obj->size() << "\n";
+			}
+			else if (att->isAggregate()){ 
+				ptree& acc = dat.add("Accuracies", "");
+				convertEntity(&dat, gc->getObject(att), currentUid);
+				/*
+				RoseObject* obj = gc->getObject(att);
+				std::cout << "is aggreagate\n";
+				for (unsigned k = 0, sz = obj->size(); k < sz; k++){
+					auto childobj = obj->getObject(k);
+					if (childobj->domain() == ROSE_DOMAIN(stp_uncertainty_measure_with_unit)){
+
+					}
+					std::cout << ": " <<  childobj->domain()->name() << "\n";
+				}//*/
+			}
+			else{ std::cout << gc->getObject(att)->domain()->name() << "\n"; } 
+		}
 	}
-	//handle units
 	//handle getting uncertainty
-	dat.add("Id.<xmlattr>.id", wkpc->get_its_id());
+	dat.add("Id.<xmlattr>.id", pd->formation()->of_product()->name());
 	
 	ptree& items = geo.add("Items", "");
 	for (unsigned j = 0, sz = srep->items()->size(); j < sz; j++){
@@ -282,17 +316,14 @@ std::string handleGeometry(Workpiece * wkpc, ptree* tree){
 	return uidForRef;
 }
 
-void makePart(Workpiece * wkpc, ptree* tree){
+void makePart(stp_shape_definition_representation * sdr, ptree* tree){
 	// void makePart(stp_shape_definition_representation * sdr, ptree* tree){
 	uid++;
 	unsigned i;
 	int currentUid = uid;
 	RoseObject* obj;
 	ListOfRoseObject children;
-	stp_product_definition* pd;
-	
-	stp_shape_representation* srep = wkpc->get_its_geometry();
-	pd = wkpc->getRoot();
+	stp_product_definition* pd = ROSE_CAST(stp_product_definition, rose_get_nested_object(ROSE_CAST(stp_product_definition_shape, rose_get_nested_object(sdr->definition()))->definition()));
 	pd->findObjects(&children, INT_MAX, false);
 
 	uidTracker* mgr = uidTracker::find(pd);
@@ -306,15 +337,15 @@ void makePart(Workpiece * wkpc, ptree* tree){
 	part.add("<xmlattr>.id", pd->domain()->name() + std::string("--") + std::to_string(currentUid));
 
 	ptree& xmlObj = part.add("Id", "");
-	xmlObj.add("<xmlattr>.id", wkpc->get_its_id() );
+	xmlObj.add("<xmlattr>.id", pd->formation()->of_product()->name() );
 
 	xmlObj.add("Identifier", "");
 	xmlObj.add("Identifier.<xmlattr>.uid", "pid--" + std::to_string(currentUid) + "--id" + std::to_string(id_count));
 
-	xmlObj.add("Identifier.<xmlattr>.id", wkpc->get_its_id());
+	xmlObj.add("Identifier.<xmlattr>.id", pd->formation()->of_product()->name());
 	xmlObj.add("Identifier.<xmlattr>.idContextRef", "create references");
 
-	part.add("Name.CharacterString", wkpc->get_its_id());
+	part.add("Name.CharacterString", pd->formation()->of_product()->name());
 
 	RoseCursor curse;
 	curse.domain(ROSE_DOMAIN(stp_product_related_product_category));
@@ -330,8 +361,8 @@ void makePart(Workpiece * wkpc, ptree* tree){
 	part.add("Versions.PartVersion.Views.VersionOf", "p--" + std::to_string(currentUid));
 	part.add("Versions.PartVersion.<xmlattr>.uid", "pv--" + std::to_string(currentUid) + "--id" + std::to_string(id_count));
 
-	if (wkpc->get_revision_id() != NULL && strcmp(wkpc->get_revision_id(), "None") && strcmp(wkpc->get_revision_id(), "")){ //DO STRCMP or similarto check if none or empty
-		part.add("Versions.Id.<xmlattr>.id", wkpc->get_revision_id());
+	if (pd->formation()->id() != NULL && strcmp(pd->formation()->id(), "None") && strcmp(pd->formation()->id(), "")){ //DO STRCMP or similarto check if none or empty
+		part.add("Versions.Id.<xmlattr>.id", pd->formation()->id());
 	}
 	else { part.add("Versions.Id.<xmlattr>.id", "/NULL"); } //replace null with a check for versioning that returns a string 
 
@@ -340,7 +371,7 @@ void makePart(Workpiece * wkpc, ptree* tree){
 	pv.add("<xmlattr>.xsi:type", "n0:AssemblyDefinition");
 	pv.add("<xmlattr>.uid", "pvv--" + std::to_string(currentUid) + "--id" + std::to_string(id_count));
 
-	std::string geoRef = handleGeometry(wkpc, tree);	//ptree& geoRep = tree->add("n0:Uos.DataContainer.GeometricRepresentation", "");
+	std::string geoRef = handleGeometry(sdr, tree);	//ptree& geoRep = tree->add("n0:Uos.DataContainer.GeometricRepresentation", "");
 	pv.put("DefiningGeometry.<xmlattr>.uidRef", geoRef);
 	///do single occurence, 
 	StixMgrAsmProduct * pm = StixMgrAsmProduct::find(pd);
@@ -491,7 +522,6 @@ int main(int argc, char* argv[]){
 	}
 	RoseDesign * master = ROSE.useDesign(infilename.c_str());
 	stix_tag_units(master);
-	ARMpopulate(master);
 
 	std::string name = "test.xml";
 	std::string wrapperUrls[] = { "http://www.w3.org/2001/XMLSchema-instance", "http://standards.iso.org/iso/ts/10303/-3001/-ed-1/tech/xml-schema/bo_model", "http://standards.iso.org/iso/ts/10303/-3000/-ed-1/tech/xml-schema/common", "http://standards.iso.org/iso/ts/10303/-3001/-ed-1/tech/xml-schema/bo_model AP242_BusinessObjectModel.xsd" };
@@ -511,7 +541,13 @@ int main(int argc, char* argv[]){
 	dat.add("<xmlattr>.xsi:type", "n0:AP242DataContainer");
 
 	stix_tag_asms(master);
-	ARMCursor cur; //arm cursor
+
+	for (auto &i : ROSE_RANGE(stp_shape_definition_representation, master)){
+		//doUnits(&i, &tree);
+		makePart(&i, &tree);
+	}
+
+	/*ARMCursor cur; //arm cursor
 	ARMObject *a_obj;
 	cur.domain(Workpiece::type());
 	cur.traverse(master);
@@ -519,14 +555,14 @@ int main(int argc, char* argv[]){
 	//unsigned i, sz;
 	while (a_obj = cur.next()){
 		doUnits(a_obj->castToWorkpiece(), &tree);
-		makePart(a_obj->castToWorkpiece(), &tree);
+		//makePart(a_obj->castToWorkpiece(), &tree);
 	}
 	cur.traverse(master);
 	cur.domain(NULL);
 	while (a_obj = cur.next()){
 		//std::cout << a_obj->getModuleName() << std::endl;
 	}
-
+	*/
 	write_xml(std::string(master->fileDirectory() + name), tree, std::locale(), xml_writer_settings<char>(' ', 4));
 
 	return 0;
