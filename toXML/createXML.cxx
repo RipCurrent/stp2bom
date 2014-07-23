@@ -80,7 +80,7 @@ void convertEntity(ptree* scope, RoseObject* ent, int currentUid, std::string na
 			if (obj){ 
 				if (obj->domain() == ROSE_DOMAIN(stp_measure_value)){
 					auto tmp = ROSE_CAST(stp_measure_value, obj);
-					scope->add(ent->getAttribute("name")->getString(), tmp->_length_measure());
+					scope->add(ent->getString((ent->getAttribute("name"))), tmp->_length_measure());
 				}
 			}
 		}
@@ -262,7 +262,7 @@ std::string handleGeometry(stp_shape_definition_representation* sdr, ptree* tree
 	auto gc = srep->context_of_items(); 
 	RoseAttribute* tmpAtt = gc->getAttribute("coordinate_space_dimension");
 	dat.add("DimensionCount", gc->getInteger(tmpAtt));
-
+	ptree& acc = dat.add("Accuracies", ""); //may need check for existance of any accuracy units
 	for (unsigned i = 0; i < gc->attributes()->size(); i++){
 		RoseAttribute* att = gc->attributes()->get(i);
 		std::cout << gc->attributes()->get(i)->name() << ": ";
@@ -275,18 +275,7 @@ std::string handleGeometry(stp_shape_definition_representation* sdr, ptree* tree
 				std::cout << obj->size() << "\n";
 			}
 			else if (att->isAggregate()){ 
-				ptree& acc = dat.add("Accuracies", "");
-				convertEntity(&dat, gc->getObject(att), currentUid);
-				/*
-				RoseObject* obj = gc->getObject(att);
-				std::cout << "is aggreagate\n";
-				for (unsigned k = 0, sz = obj->size(); k < sz; k++){
-					auto childobj = obj->getObject(k);
-					if (childobj->domain() == ROSE_DOMAIN(stp_uncertainty_measure_with_unit)){
-
-					}
-					std::cout << ": " <<  childobj->domain()->name() << "\n";
-				}//*/
+				convertEntity(&acc, gc->getObject(att), currentUid);
 			}
 			else{ std::cout << gc->getObject(att)->domain()->name() << "\n"; } 
 		}
