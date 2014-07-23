@@ -254,7 +254,7 @@ std::string handleGeometry(stp_shape_definition_representation* sdr, ptree* tree
 	std::string uidForRef("gm--" + std::to_string(currentUid));
 	ptree& geo = tree->add("n0:Uos.DataContainer.GeometricRepresentation", "");
 	geo.add("<xmlattr>.uid", uidForRef);
-	//ContextOfItems uidRef = coordinatespace(srep->context of items
+
 	uid++;
 	geo.add( srep->context_of_items()->className() + std::string(".<xmlattr>.uidRef"), "gcs--" + std::to_string(uid));
 	ptree& dat = tree->add("n0:Uos.DataContainer.GeometricCoordinateSpace", "");
@@ -263,6 +263,7 @@ std::string handleGeometry(stp_shape_definition_representation* sdr, ptree* tree
 	RoseAttribute* tmpAtt = gc->getAttribute("coordinate_space_dimension");
 	dat.add("DimensionCount", gc->getInteger(tmpAtt));
 	ptree& acc = dat.add("Accuracies", ""); //may need check for existance of any accuracy units
+	//handles Geometric coordinateSpace 
 	for (unsigned i = 0; i < gc->attributes()->size(); i++){
 		RoseAttribute* att = gc->attributes()->get(i);
 		std::cout << gc->attributes()->get(i)->name() << ": ";
@@ -280,7 +281,7 @@ std::string handleGeometry(stp_shape_definition_representation* sdr, ptree* tree
 			else{ std::cout << gc->getObject(att)->domain()->name() << "\n"; } 
 		}
 	}
-	//handle getting uncertainty
+
 	dat.add("Id.<xmlattr>.id", pd->formation()->of_product()->name());
 	
 	ptree& items = geo.add("Items", "");
@@ -366,23 +367,25 @@ void makePart(stp_shape_definition_representation * sdr, ptree* tree){
 	StixMgrAsmProduct * pm = StixMgrAsmProduct::find(pd);
 	if (mgr){
 		if (mgr->getPV()){
-			if (mgr->getOccurence() > 2 && mgr->needsSpecifiedOccurrence){//need to have it check occurrences of the parent design?
-				for (i = 1; i < mgr->occurence; i++){
-					ptree& pi = pv.add("Occurrence", "");
-					pi.add("<xmlattr>.xsi:type", "n0:SpecifiedOccurrence");
-					pi.add("<xmlattr>.uid", "spo--" + std::to_string(uid));
-					pi.add("AssemblyContext.<xmlattr>.uidRef", mgr->getAssemblyContext());
-					//pi.add("SubAssemblyRelationship.<xmlattr>.uidRef", )
-					pi.add("UpperAssemblyRelationship.<xmlattr>.uidRef", "");
-				}
-			}
-			//uid++;
 			for (i = 0; i < pm->parent_nauos.size() ; i++){
 				ptree& pi = pv.add("Occurrence", "");
 				pi.add("<xmlattr>.xsi:type", "n0:SingleOccurrence");
 				pi.add("<xmlattr>.uid", "pi--" + std::to_string(mgr->getUid()) + "--id" + std::to_string((i)) );
 				pi.add("Id.<xmlattr>. id", pd->formation()->of_product()->name() + std::string(".") + std::to_string((i)) );
 				pi.add("PropertyValueAssignment.<xmlattr>.uid", "pva--" + std::to_string(currentUid));
+				mgr->setSubRelation("pi--" + std::to_string(mgr->getUid()) + "--id" + std::to_string((i + 1)));
+			}
+
+			uid++;
+			if ( mgr->needsSpecifiedOccurrence && mgr->getParentOccurrences() > 1){//need to have it check occurrences of the parent design?
+				for (i = 1; i < mgr->getParentOccurrences()+1; i++){
+					ptree& pi = pv.add("Occurrence", "");
+					pi.add("<xmlattr>.xsi:type", "n0:SpecifiedOccurrence");
+					pi.add("<xmlattr>.uid", "spo--" + std::to_string(uid));
+					pi.add("AssemblyContext.<xmlattr>.uidRef", mgr->getAssemblyContext());
+					pi.add("SubAssemblyRelationship.<xmlattr>.uidRef", mgr->getSubRelation());
+					pi.add("UpperAssemblyRelationship.<xmlattr>.uidRef", "");
+				}
 			}
 		}
 		std::cout << "Occurrence: " << pd->formation()->of_product()->name() << ", " << pm->parent_nauos.size() << "\n";
@@ -429,7 +432,6 @@ void do_nauos(stp_product_definition* pd, ptree* pv, int currentUid){
 		mgr->occurence++;
 
 		if (!mgr->needsSpecifiedOccurrence){
-			std::cout << "Set context.\n";
 			mgr->setAssemblyContext("pvv--" + std::to_string(currentUid) + "--id" + std::to_string(id_count));
 		}
 	}
@@ -438,11 +440,12 @@ void do_nauos(stp_product_definition* pd, ptree* pv, int currentUid){
 	for (unsigned i = 0; i < pm->child_nauos.size(); i++){
 		if (pgMgr){
 			if (pgMgr->getOccurence() > 2 && pgMgr->needsSpecifiedOccurrence){//need to have it check occurrences of the parent design?
-				for (i = 1; i < pgMgr->occurence; i++){
-					for (unsigned i = 0; i < pm->child_nauos.size(); i++){//set Upper Assemly Relationship
-						//ptree& pi = pv->add("Occurrence", "");
-						//pi.add("UpperAssemblyRelationship.<xmlattr>.uidRef", "");
+				for (unsigned i = 0; i < pm->child_nauos.size(); i++){//set Upper Assemly Relationship
+					uidTracker* mgr = uidTracker::find(stix_get_related_pdef(pm->child_nauos[i]));
+					if (pgMgr->getParentOccurrences() > 1){
+						mgr->ParentOccurences = pgMgr->getParentOccurrences() * pm->parent_nauos.size();
 					}
+					else{ mgr->ParentOccurences = pm->parent_nauos.size(); }
 				}
 			}
 		}
