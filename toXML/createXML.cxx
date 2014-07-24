@@ -17,7 +17,7 @@
 
 #include "track.h"
 #include "ROSERange.h"
-#pragma comment(lib,"stpcad_stix.lib")
+#pragma comment(lib,"stpcad_stixdll.lib")
 
 using boost::property_tree::ptree;
 using boost::property_tree::write_xml;
@@ -35,7 +35,7 @@ void add_simple(ptree* scope, RoseAttribute* att, RoseObject* ent, std::string n
 void convertEntity(ptree* scope, RoseObject* ent, int currentUid, std::string name = ""){ //make it dumb so that it can be used on geomertry objects as well
 	RoseObject* obj = ent;
 	auto atts = ent->attributes();
-	if (!ent){ std::cout << "ent is null. WHERE IS YOUR GOD NOW! \n"; }
+	if (!ent){ return; }
 	for (unsigned i = 0, sz = atts->size(); i < sz; i++){
 		RoseAttribute* att = atts->get(i);
 		if (att->isEntity()){ //att points to another object //recurse!
@@ -47,7 +47,7 @@ void convertEntity(ptree* scope, RoseObject* ent, int currentUid, std::string na
 			obj = ent->getObject(att);
 			std::string derp;
 			if (obj->attributes()->get(0)->isEntity()){
-				std::cout << "Aggregate has multiple levels of attributes " << obj->domain()->name() << "\n"; //currently this makes it ignore manifold solid brep and all of its possible children
+				//std::cout << "Aggregate has multiple levels of attributes " << obj->domain()->name() << "\n"; //currently this makes it ignore manifold solid brep and all of its possible children
 			}
 			else{
 				for (unsigned j = 0, sz = obj->size(); j < sz; j++){
@@ -266,19 +266,18 @@ std::string handleGeometry(stp_shape_definition_representation* sdr, ptree* tree
 	//handles Geometric coordinateSpace 
 	for (unsigned i = 0; i < gc->attributes()->size(); i++){
 		RoseAttribute* att = gc->attributes()->get(i);
-		std::cout << gc->attributes()->get(i)->name() << ": ";
+		//std::cout << gc->attributes()->get(i)->name() << ": ";
 		if (att->isSimple()){
-			if (att->isInteger()){ std::cout << gc->getInteger(att) << "int\n";	}
+			if (att->isInteger()){ /*std::cout << gc->getInteger(att) << "int\n";*/	}
 		}
 		else{
 			if (att->isSelect()){
 				RoseObject* obj = rose_get_nested_object(ROSE_CAST(RoseUnion, gc->getObject(att)));
-				std::cout << obj->size() << "\n";
 			}
 			else if (att->isAggregate()){ 
 				convertEntity(&acc, gc->getObject(att), currentUid);
 			}
-			else{ std::cout << gc->getObject(att)->domain()->name() << "\n"; } 
+			else{ /*std::cout << gc->getObject(att)->domain()->name() << "\n";*/ } 
 		}
 	}
 
@@ -302,7 +301,6 @@ std::string handleGeometry(stp_shape_definition_representation* sdr, ptree* tree
 			convertEntity(&repItem, srep->items()->get(j), currentUid);
 		}
 	}
-
 	return uidForRef;
 }
 
@@ -389,7 +387,7 @@ void makePart(stp_shape_definition_representation * sdr, ptree* tree){
 				}
 			}
 		}
-		std::cout << "Occurrence: " << pd->formation()->of_product()->name() << ", " << pm->parent_nauos.size() << "\n";
+		//std::cout << "Occurrence: " << pd->formation()->of_product()->name() << ", " << pm->parent_nauos.size() << "\n";
 	}
 	do_nauos(pd, &pv, currentUid); //deals with objects below the current product in a tree view of the design while maintaining acg
 	ptree& pva = pv.add("PropertyValueAssignment", "");
