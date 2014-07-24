@@ -452,7 +452,10 @@ void do_nauos(stp_product_definition* pd, ptree* pv, int currentUid){
 				for (unsigned i = 0; i < pm->child_nauos.size(); i++){//set Upper Assemly Relationship
 					uidTracker* mgr = uidTracker::find(stix_get_related_pdef(pm->child_nauos[i]));
 					if (pgMgr->getParentOccurrences() > 1){
-						mgr->ParentOccurences = pgMgr->getParentOccurrences() * pm->parent_nauos.size();
+						if (pgMgr->getParentOccurrences() > pm->parent_nauos.size()){
+							mgr->ParentOccurences = pgMgr->getParentOccurrences();
+						}
+						else { mgr->ParentOccurences = pm->parent_nauos.size(); }
 					}
 					else{ mgr->ParentOccurences = pm->parent_nauos.size(); }
 				}
