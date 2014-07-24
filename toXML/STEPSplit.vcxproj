@@ -117,13 +117,13 @@
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\local\boost_1_55_0;$(ROSE_INCLUDE);$(ROSE_INCLUDE)/stixbase;$(ROSE_INCLUDE)/stix;$(ROSE_INCLUDE)/stmodule;$(ROSE_INCLUDE)/stpcad</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\local\boost_1_55_0;$(ROSE_INCLUDE);$(ROSE_INCLUDE)\stix;$(ROSE_INCLUDE)\stpcad</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ROSE)\lib\i86_win32_vc11_md;C:\local\boost_1_55_0\lmib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>stpcad_stix.lib;stpcad.lib;p28e2.lib;rose.lib;kernel32.lib;user32.lib;advapi32.lib;stmodule.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ROSE)\lib\i86_win32_vc12_md;C:\local\boost_1_55_0\lmib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>stpcad_stixdlld.lib;stpcaddlld.lib;p28e2dlld.lib;rosedlld.lib;kernel32.lib;user32.lib;advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>MSVCRT</IgnoreSpecificDefaultLibraries>
     </Link>
     <BuildLog>
@@ -197,13 +197,13 @@
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;ROSE_DLL;ROSE_CLSDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ROSE_INCLUDE);$(ROSE_INCLUDE)\stpcad</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\local\boost_1_55_0;$(ROSE_INCLUDE);$(ROSE_INCLUDE)\stix;$(ROSE_INCLUDE)\stpcad</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ROSE)\lib\i86_win32_vc12_md</AdditionalLibraryDirectories>
-      <AdditionalDependencies>stpcaddlld.lib;p28e2dlld.lib;rosedlld.lib;kernel32.lib;user32.lib;advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>stpcaddlld.lib;stpcad_stixdlld.lib;p28e2dlld.lib;rosedlld.lib;kernel32.lib;user32.lib;advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>MSVCRT</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>

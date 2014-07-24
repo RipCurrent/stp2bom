@@ -13,32 +13,36 @@ private:
 	boost::property_tree::ptree *	partViewTree;
 	std::string						Suid;
 	unsigned						uid=0;
-	std::string						upperRelation; //could I just make this another uid?
+	std::vector<std::string>		upperRelation; //could I just make this another uid?
 	std::string						assCon;
 	std::string						subAssRel;
+	
 
 public:
 
 	ROSE_DECLARE_MANAGER_COMMON();
 
-	bool							needsSpecifiedOccurrence = false;
+	bool needsSpecifiedOccurrence = false;
+	stp_product_definition*			parent;
 
-	void setUid(int u)		{ uid = u; }
-	int getUid()			{ return uid; }
+	void setUid(int u)									{ uid = u; }
+	int getUid()										{ return uid; }
 
-	void setUid(std::string u)		{ Suid = u; }
-	std::string getSUid()			{ return Suid; }
+	void setUid(std::string u)							{ Suid = u; }
+	std::string getSUid()								{ return Suid; }
 
 	int occurence = 1;
 	int ParentOccurences = 0;
-	int getOccurence()				{ return occurence; }
-	int getParentOccurrences()		{ return ParentOccurences; }
+	int getOccurence()									{ return occurence; }
+	int getParentOccurrences()							{ return ParentOccurences; }
 
-	void setSubRelation(std::string u)		{ subAssRel = u; }
-	std::string getSubRelation()			{ return subAssRel; }
+	void setSubRelation(std::string u)					{ subAssRel = u; }
+	std::string getSubRelation()						{ return subAssRel; }
 
-	void setUpperRelation(std::string pd)	{ upperRelation = pd; }
-	std::string getUpperRelation()			{ return upperRelation; }
+	void setUpperRelation(std::string pd)				{ upperRelation.push_back(pd); }
+	void emptyUpperRelation()							{ upperRelation.empty(); }
+	std::string getUpperRelation(int i)					{ return upperRelation[i]; }
+	int sizeOfUpperRel()								{ return upperRelation.size(); }
 
 	void setAssemblyContext(std::string u)				{ assCon = u; }
 	std::string getAssemblyContext()					{ return assCon; }

@@ -372,6 +372,10 @@ void makePart(stp_shape_definition_representation * sdr, ptree* tree){
 				pi.add("Id.<xmlattr>. id", pd->formation()->of_product()->name() + std::string(".") + std::to_string((i)) );
 				pi.add("PropertyValueAssignment.<xmlattr>.uid", "pva--" + std::to_string(currentUid));
 				mgr->setSubRelation("pi--" + std::to_string(mgr->getUid()) + "--id" + std::to_string((i + 1)));
+				if (pm->parent_nauos.size() > 1){
+					//add single occurence to upperrelation
+					mgr->setUpperRelation("pi--" + std::to_string(mgr->getUid()) + "--id" + std::to_string((i + 1)));
+				}
 			}
 			uid++;
 			if ( mgr->needsSpecifiedOccurrence && mgr->getParentOccurrences() > 1){//need to have it check occurrences of the parent design?
@@ -381,8 +385,15 @@ void makePart(stp_shape_definition_representation * sdr, ptree* tree){
 					pi.add("<xmlattr>.uid", "spo--" + std::to_string(uid));
 					pi.add("AssemblyContext.<xmlattr>.uidRef", mgr->getAssemblyContext());
 					pi.add("SubAssemblyRelationship.<xmlattr>.uidRef", mgr->getSubRelation());
-
-					pi.add("UpperAssemblyRelationship.<xmlattr>.uidRef", "");
+					if (mgr->parent){
+						uidTracker* tmpMgr = uidTracker::find(mgr->parent);
+						if (tmpMgr){
+							if (tmpMgr->sizeOfUpperRel() > i){
+								pi.add("UpperAssemblyRelationship.<xmlattr>.uidRef", tmpMgr->getUpperRelation(i));
+							}
+						}
+					}
+					uid++;
 				}
 			}
 		}
@@ -401,7 +412,6 @@ void do_nauos(stp_product_definition* pd, ptree* pv, int currentUid){
 	StixMgrAsmProduct * pm = StixMgrAsmProduct::find(pd);
 	uidTracker* pgMgr = uidTracker::find(pd);
 	for (unsigned i = 0; i < pm->child_nauos.size(); i++){
-		//uid++; 
 		ptree& pi = pv->add("ViewOccurrenceRelationship", "");
 		uidTracker* mgr = uidTracker::make(stix_get_related_pdef(pm->child_nauos[i])); //may need to label something different
 		uidTracker* nauoMgr = uidTracker::make(pm->child_nauos[i]);
@@ -420,7 +430,7 @@ void do_nauos(stp_product_definition* pd, ptree* pv, int currentUid){
 			mgr->needsSpecifiedOccurrence = true; //child parts require (occurence-1) specified occurrences
 			// use a list attached to nauo or pd to keep an ordered of how many single occurrences are needed?
 		}
-
+		mgr->parent = pd;
 		mgr->setPV(pv);
 		pi.add("<xmlattr>.uid", "pvvid--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence+1));
 		pi.add("<xmlattr>.xsi:type", std::string("n0:") + pm->child_nauos[i]->domain()->name());
@@ -490,7 +500,7 @@ int CountSubs(stp_product_definition * root){ //return the total count of subass
 
 int main(int argc, char* argv[]){
 	if (argc < 2){
-		std::cout << "Usage: .\\STEPSplit.exe filetosplit.stp\n" << "\tCreates new file SplitOutput.stp as master step file with seperate files for each product" << std::endl;
+		std::cout << "Usage: .\\createXML.exe fileforXML.stp\n\tCreates new file test.xml" << std::endl;
 		return EXIT_FAILURE;
 	}
 	ROSE.quiet(1);	//Suppress startup info.
@@ -499,8 +509,6 @@ int main(int argc, char* argv[]){
 	FILE *out;
 	out = fopen("log.txt", "w");
 	//ROSE.error_reporter()->error_file(out);
-	RoseP21Writer::max_spec_version(PART21_ED3);	//We need to use Part21 Edition 3 otherwise references won't be handled properly.
-	/* Create a RoseDesign to hold the output data*/
 	std::string infilename(argv[1]);
 	if (NULL == rose_dirname(infilename.c_str()))	//Check if there's already a path on the input file. If not, add '.\' AKA the local directory.
 	{
