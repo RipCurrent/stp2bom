@@ -368,7 +368,12 @@ void makePart(stp_shape_definition_representation * sdr, ptree* tree){
 			for (i = 0; i < pm->parent_nauos.size() ; i++){
 				ptree& pi = pv.add("Occurrence", "");
 				pi.add("<xmlattr>.xsi:type", "n0:SingleOccurrence");
-				pi.add("<xmlattr>.uid", "pi--" + std::to_string(mgr->getUid()) + "--id" + std::to_string((i+1)) );
+				nauoTracker * forRelated = nauoTracker::make(pm->parent_nauos[i]);
+				if (forRelated->getRelated().size() > 0){ pi.add("<xmlattr>.uid", forRelated->getRelated()); }
+				else { 
+					pi.add("<xmlattr>.uid", "pi--" + std::to_string(mgr->getUid()) + "--id" + std::to_string((i + 1))); //nauo referencing this has been created
+					forRelated->setRelated("pi--" + std::to_string(mgr->getUid()) + "--id" + std::to_string((i + 1))); //if nauo related to this has not been set yet it, now it will be set for future related calls
+				}
 				pi.add("Id.<xmlattr>. id", pd->formation()->of_product()->name() + std::string(".") + std::to_string((i)) );
 				pi.add("PropertyValueAssignment.<xmlattr>.uid", "pva--" + std::to_string(currentUid));
 				mgr->setSubRelation("pi--" + std::to_string(mgr->getUid()) + "--id" + std::to_string((i + 1)));
@@ -434,7 +439,14 @@ void do_nauos(stp_product_definition* pd, ptree* pv, int currentUid){
 		mgr->setPV(pv);
 		pi.add("<xmlattr>.uid", "pvvid--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence+1));
 		pi.add("<xmlattr>.xsi:type", std::string("n0:") + pm->child_nauos[i]->domain()->name());
-		pi.add("Related.<xmlattr>.uidRef", "pi--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence));
+		nauoTracker * forRelated = nauoTracker::make(pm->child_nauos[i]);
+			if (forRelated->getRelated().size() > 0){
+				pi.add("Related.<xmlattr>.uidRef", forRelated->getRelated());
+			}
+			else{ 
+				pi.add("Related.<xmlattr>.uidRef", "pi--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence));
+				forRelated->setRelated("pi--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence)); 
+			}
 		pi.add("Id.<xmlattr>.id", pm->child_nauos[i]->id() + std::string(".") + std::to_string(mgr->getOccurence()));
 		pi.add("Description", pm->child_nauos[i]->description());
 		pi.add("PropertyValueAssignment.<xmlattr>.uidRef", "pva--" + std::to_string(currentUid));
