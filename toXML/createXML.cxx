@@ -234,7 +234,7 @@ void doShapeDependentProperty(Workpiece * wkpc, ptree* tree){ //waiting for joe 
 	sdp.add("<xlmattr>.xsi:type", "n1:GeneralShapeDependentProperty");
 }*/
 
-void doPartProperty(ptree* tree, RoseObject* ent){//filler code for demo
+void doPartProperty(ptree* tree, RoseObject* ent){//Currently Hard Coded 
 	uid++;
 	stp_product_definition * pd = ROSE_CAST(stp_product_definition, ent);
 	ptree& pv = tree->add("AssignedPropertyValue.PropertyValue", "");
@@ -242,7 +242,7 @@ void doPartProperty(ptree* tree, RoseObject* ent){//filler code for demo
 	pv.add("<xmlattr>.xsi:type", "n1:StringValue");
 	pv.add("Definition.PropertyDefinitionString", "Part Origin"); // place of origin. is this for the design or manufacture of the part?
 	pv.add("Name.CharacterString", pd->formation()->of_product()->name());
-	pv.add("ValueComponent.CharacterString", "Step Tools Inc");
+	pv.add("ValueComponent.CharacterString", "STEP Tools Inc");
 }
 
 std::string handleGeometry(stp_shape_definition_representation* sdr, ptree* tree){
@@ -368,12 +368,11 @@ void makePart(stp_shape_definition_representation * sdr, ptree* tree){
 			for (i = 0; i < pm->parent_nauos.size() ; i++){
 				ptree& pi = pv.add("Occurrence", "");
 				pi.add("<xmlattr>.xsi:type", "n0:SingleOccurrence");
-				pi.add("<xmlattr>.uid", "pi--" + std::to_string(mgr->getUid()) + "--id" + std::to_string((i)) );
+				pi.add("<xmlattr>.uid", "pi--" + std::to_string(mgr->getUid()) + "--id" + std::to_string((i+1)) );
 				pi.add("Id.<xmlattr>. id", pd->formation()->of_product()->name() + std::string(".") + std::to_string((i)) );
 				pi.add("PropertyValueAssignment.<xmlattr>.uid", "pva--" + std::to_string(currentUid));
 				mgr->setSubRelation("pi--" + std::to_string(mgr->getUid()) + "--id" + std::to_string((i + 1)));
 			}
-
 			uid++;
 			if ( mgr->needsSpecifiedOccurrence && mgr->getParentOccurrences() > 1){//need to have it check occurrences of the parent design?
 				for (i = 0; i < mgr->getParentOccurrences(); i++){
@@ -423,7 +422,7 @@ void do_nauos(stp_product_definition* pd, ptree* pv, int currentUid){
 		}
 
 		mgr->setPV(pv);
-		pi.add("<xmlattr>.uid", "pvvid--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence));
+		pi.add("<xmlattr>.uid", "pvvid--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence+1));
 		pi.add("<xmlattr>.xsi:type", std::string("n0:") + pm->child_nauos[i]->domain()->name());
 		pi.add("Related.<xmlattr>.uidRef", "pi--" + std::to_string(uid) + "--id" + std::to_string(mgr->occurence));
 		pi.add("Id.<xmlattr>.id", pm->child_nauos[i]->id() + std::string(".") + std::to_string(mgr->getOccurence()));
