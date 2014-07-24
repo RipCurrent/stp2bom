@@ -378,12 +378,13 @@ void makePart(stp_shape_definition_representation * sdr, ptree* tree){
 
 			uid++;
 			if ( mgr->needsSpecifiedOccurrence && mgr->getParentOccurrences() > 1){//need to have it check occurrences of the parent design?
-				for (i = 1; i < mgr->getParentOccurrences()+1; i++){
+				for (i = 0; i < mgr->getParentOccurrences(); i++){
 					ptree& pi = pv.add("Occurrence", "");
 					pi.add("<xmlattr>.xsi:type", "n0:SpecifiedOccurrence");
 					pi.add("<xmlattr>.uid", "spo--" + std::to_string(uid));
 					pi.add("AssemblyContext.<xmlattr>.uidRef", mgr->getAssemblyContext());
 					pi.add("SubAssemblyRelationship.<xmlattr>.uidRef", mgr->getSubRelation());
+
 					pi.add("UpperAssemblyRelationship.<xmlattr>.uidRef", "");
 				}
 			}
@@ -406,6 +407,7 @@ void do_nauos(stp_product_definition* pd, ptree* pv, int currentUid){
 		//uid++; 
 		ptree& pi = pv->add("ViewOccurrenceRelationship", "");
 		uidTracker* mgr = uidTracker::make(stix_get_related_pdef(pm->child_nauos[i])); //may need to label something different
+		uidTracker* nauoMgr = uidTracker::make(pm->child_nauos[i]);
 		std::cout << stix_get_related_pdef(pm->child_nauos[i])->formation()->of_product()->name() << mgr->getOccurence() << "\n";
 		if (mgr->getUid() == 0){
 			uid++;
@@ -435,7 +437,7 @@ void do_nauos(stp_product_definition* pd, ptree* pv, int currentUid){
 			mgr->setAssemblyContext("pvv--" + std::to_string(currentUid) + "--id" + std::to_string(id_count));
 		}
 	}
-	std::cout << "Parent nauo of " << pd->formation()->of_product()->name() << ": " << pm->parent_nauos.size() << "\n";
+	
 	//specified occurrences
 	for (unsigned i = 0; i < pm->child_nauos.size(); i++){
 		if (pgMgr){

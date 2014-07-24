@@ -15,6 +15,7 @@ private:
 	unsigned						uid=0;
 	std::string						upperRelation; //could I just make this another uid?
 	std::string						assCon;
+	std::string						subAssRel;
 
 public:
 
@@ -29,7 +30,12 @@ public:
 	std::string getSUid()			{ return Suid; }
 
 	int occurence = 1;
+	int ParentOccurences = 0;
 	int getOccurence()				{ return occurence; }
+	int getParentOccurrences()		{ return ParentOccurences; }
+
+	void setSubRelation(std::string u)		{ subAssRel = u; }
+	std::string getSubRelation()			{ return subAssRel; }
 
 	void setUpperRelation(std::string pd)	{ upperRelation = pd; }
 	std::string getUpperRelation()			{ return upperRelation; }

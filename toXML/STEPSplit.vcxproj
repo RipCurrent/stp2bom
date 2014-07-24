@@ -140,13 +140,13 @@
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>"C:\local\boost_1_55_0";$(ROSE_INCLUDE);$(ROSE_INCLUDE)/stixbase;$(ROSE_INCLUDE)/stix;$(ROSE_INCLUDE)/stmodule;$(ROSE_INCLUDE)/stpcad;$(ROSE_INCLUDE)/stpcad_arm</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>"C:\local\boost_1_55_0";$(ROSE_INCLUDE);$(ROSE_INCLUDE)/stixbase;$(ROSE_INCLUDE)/stix;$(ROSE_INCLUDE)/stmodule;$(ROSE_INCLUDE)/stpcad</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\local\boost_1_55_0\lib64-msvc-12.0;$(ROSE)\lib\x64_win64_vc12_md</AdditionalLibraryDirectories>
-      <AdditionalDependencies>stpcad.lib;p28e2.lib;rose.lib;kernel32.lib;user32.lib;advapi32.lib;stpcad_arm.lib;stmodule.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>stpcad.lib;p28e2.lib;rose.lib;kernel32.lib;user32.lib;advapi32.lib;stmodule.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>MSVCRT</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
@@ -214,7 +214,7 @@
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;ROSE_DLL;ROSE_CLSDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ROSE_INCLUDE);$(ROSE_INCLUDE)\stpcad</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ROSE_INCLUDE);$(ROSE_INCLUDE)\stpcad;C:\local\boost_1_55_0;$(ROSE_INCLUDE)/stixbase;$(ROSE_INCLUDE)\stix</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
