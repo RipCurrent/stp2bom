@@ -316,6 +316,16 @@ std::string handleGeometry(stp_shape_definition_representation* sdr, ptree* tree
 	return uidForRef;
 }
 
+std::string doViewContext(ptree* tree, stp_product_definition* pd){
+	std::string fullUid = "vc--" + std::to_string(uid);
+	ptree& viewContext = tree->add("n0:Uos.DataContainer.ViewContext", "");
+	viewContext.add("<xmlattr>.uid", fullUid);
+	viewContext.add("ApplicationDomain.ProxyString", pd->frame_of_reference()->frame_of_reference()->application());
+	viewContext.add("Description.CharacterString", pd->frame_of_reference()->name());
+	viewContext.add("LifeCycleStage.ProxyString", pd->frame_of_reference()->life_cycle_stage());
+	return fullUid;
+}
+
 void makePart(stp_shape_definition_representation * sdr, ptree* tree){
 	// void makePart(stp_shape_definition_representation * sdr, ptree* tree){
 	uid++;
@@ -344,7 +354,7 @@ void makePart(stp_shape_definition_representation * sdr, ptree* tree){
 
 	xmlObj.add("Identifier.<xmlattr>.id", pd->formation()->of_product()->name());
 	xmlObj.add("Identifier.<xmlattr>.idContextRef", contextOrg);
-
+	//xmlObj.add("Identifier.<xmlattr>.idRoleRef", doClassOrClassification); //need to figureout how to do 5.6.4 & 5.6.5 before this can work
 	part.add("Name.CharacterString", pd->formation()->of_product()->name());
 
 	RoseCursor curse;
@@ -367,10 +377,10 @@ void makePart(stp_shape_definition_representation * sdr, ptree* tree){
 	else { part.add("Versions.Id.<xmlattr>.id", "/NULL"); } //replace null with a check for versioning that returns a string 
 
 	ptree& pv = part.add("Versions.PartVersion.Views.PartView", "");
-
 	pv.add("<xmlattr>.xsi:type", "n0:AssemblyDefinition");
 	pv.add("<xmlattr>.uid", "pvv--" + std::to_string(currentUid) + "--id" + std::to_string(id_count));
-
+	//pv.add("Id<xmlattr>.id", ???)
+	pv.add("InitialContext.<xmlattr>.uidRef", doViewContext(tree, pd));
 	std::string geoRef = handleGeometry(sdr, tree);	//ptree& geoRep = tree->add("n0:Uos.DataContainer.GeometricRepresentation", "");
 	pv.put("DefiningGeometry.<xmlattr>.uidRef", geoRef);
 	///do single occurence, 
