@@ -16,3 +16,22 @@ uidTracker * uidTracker::make(RoseObject * obj)
 	}
 	return mgr;
 }
+
+
+
+ROSE_IMPLEMENT_MANAGER_COMMON(nauoTracker);
+
+nauoTracker * nauoTracker::find(RoseObject * obj)
+{
+	return (nauoTracker*)(obj ? obj->find_manager(type()) : 0);
+}
+
+nauoTracker * nauoTracker::make(RoseObject * obj)
+{
+	nauoTracker* mgr = nauoTracker::find(obj);
+	if (!mgr) {
+		mgr = new nauoTracker;
+		obj->add_manager(mgr);
+	}
+	return mgr;
+}
