@@ -54,4 +54,22 @@ public:
 	static uidTracker* make(RoseObject * obj);
 };
 
+
+
+
+class nauoTracker : public RoseManager{
+private:
+	std::string 	f_related;
+
+public:
+
+	ROSE_DECLARE_MANAGER_COMMON();
+
+	void setRelated(std::string u) 	{ f_related = u; }
+	std::string getRelated() 	{ return f_related; }
+
+	static nauoTracker* find(RoseObject * obj);
+	static nauoTracker* make(RoseObject * obj);
+};
+
 #endif
